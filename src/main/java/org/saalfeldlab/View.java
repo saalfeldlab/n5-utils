@@ -132,7 +132,7 @@ public class View {
 					else ++d;
 				BdvOptions bdvOptions = source.numDimensions() == 2 ? Bdv.options().is2D() : Bdv.options();
 				bdv = BdvFunctions.show(
-						VolatileViews.wrapAsVolatile(
+						(RandomAccessibleInterval)VolatileViews.wrapAsVolatile(
 								source,
 								queue,
 								new CacheHints(LoadingStrategy.VOLATILE, 0, true)),
