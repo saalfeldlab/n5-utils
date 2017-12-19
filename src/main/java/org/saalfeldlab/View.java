@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -44,6 +45,9 @@ import ch.systemsx.cisd.hdf5.HDF5Factory;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.cache.volatiles.CacheHints;
 import net.imglib2.cache.volatiles.LoadingStrategy;
+import net.imglib2.realtransform.AffineTransform3D;
+import net.imglib2.util.Pair;
+import net.imglib2.util.ValuePair;
 import net.imglib2.view.Views;
 
 /**
@@ -56,22 +60,55 @@ public class View {
 	@SuppressWarnings("serial")
 	public static class Options implements Serializable {
 
+		protected static final boolean parseCSDoubleArray(final String csv, final double[] array) {
+
+			final String[] stringValues = csv.split(",\\s*");
+			if (stringValues.length != array.length)
+				return false;
+			try {
+				for (int i = 0; i < array.length; ++i)
+					array[i] = Double.parseDouble(stringValues[i]);
+			} catch (final NumberFormatException e) {
+				e.printStackTrace(System.err);
+				return false;
+			}
+			return true;
+		}
+
+		protected static final double[] parseCSDoubleArray(final String csv) {
+
+			final String[] stringValues = csv.split(",\\s*");
+			final double[] array = new double[stringValues.length];
+			try {
+				for (int i = 0; i < array.length; ++i)
+					array[i] = Double.parseDouble(stringValues[i]);
+			} catch (final NumberFormatException e) {
+				e.printStackTrace(System.err);
+				return null;
+			}
+			return array;
+		}
+
 		@Option(name = "-i", aliases = {"--container"}, required = true, usage = "container path, e.g. /nrs/flyem/data/tmp/Z0115-22.n5")
 		private final List<String> containerPaths = null;
 
 		@Option(name = "-d", aliases = {"--datasets"}, required = true, usage = "comma separated list of datasets, e.g. '/slab-26,slab-27'")
 		final List<String> datasetLists = null;
 
+		@Option(name = "-r", aliases = {"--resolution"}, required = true, usage = "comma separated list of scale factors, e.g. '4,4,40'")
+		final List<String> resolutionStrings = null;
+
 		private boolean parsedSuccessfully = false;
 
-		private final HashMap<N5Reader, String[]> sourcePaths = new HashMap<>();
+		private final HashMap<N5Reader, List<Pair<String, double[]>>> sourcePaths = new HashMap<>();
 
 		public Options(final String[] args) {
 
 			final CmdLineParser parser = new CmdLineParser(this);
 			try {
 				parser.parseArgument(args);
-				for (int i = 0; i < containerPaths.size(); ++i) {
+				double[] resolution = new double[]{1, 1, 1};
+				for (int i = 0, j = 0; i < containerPaths.size(); ++i) {
 					final String containerPath = containerPaths.get(i);
 					final N5Reader n5;
 					if (Files.isRegularFile(Paths.get(containerPath)))
@@ -79,7 +116,15 @@ public class View {
 					else
 						n5 = new N5FSReader(containerPath);
 
-					sourcePaths.put(n5, datasetLists.get(i).split(",\\s*"));
+					final String[] datasetNames = datasetLists.get(i).split(",\\s*");
+					final List<Pair<String, double[]>> datasets = new ArrayList<>();
+					for (final String datasetName : datasetNames) {
+						if (j < resolutionStrings.size())
+							resolution = parseCSDoubleArray(resolutionStrings.get(j));
+						datasets.add(new ValuePair<String, double[]>(datasetName, resolution.clone()));
+						++j;
+					}
+					sourcePaths.put(n5, datasets);
 				}
 				parsedSuccessfully = true;
 			} catch (final CmdLineException e) {
@@ -95,7 +140,7 @@ public class View {
 		/**
 		 * @return the source path tuples
 		 */
-		public HashMap<N5Reader, String[]> getSourcePaths() {
+		public HashMap<N5Reader, List<Pair<String, double[]>>> getSourcePaths() {
 			return sourcePaths;
 		}
 
@@ -119,18 +164,25 @@ public class View {
 		final SharedQueue queue = new SharedQueue(Math.max(1, numProc / 2));
 		BdvStackSource<?> bdv = null;
 
-		for (final Entry<N5Reader, String[]> entry : options.getSourcePaths().entrySet()) {
+		for (final Entry<N5Reader, List<Pair<String, double[]>>> entry : options.getSourcePaths().entrySet()) {
 
-			System.out.println(entry.getKey() + " : " + Arrays.toString(entry.getValue()));
 			final N5Reader n5 = entry.getKey();
-			for (final String datasetName : entry.getValue()) {
+			for (final Pair<String, double[]> dataset : entry.getValue()) {
 
-				RandomAccessibleInterval<?> source = N5Utils.openVolatile(n5, datasetName);
+				final String datasetName = dataset.getA();
+				final double[] resolution = dataset.getB();
+				System.out.println(entry.getKey() + " : " + datasetName + ", " + Arrays.toString(resolution));
+				RandomAccessibleInterval<?> source = N5Utils.openVolatile(n5, dataset.getA());
+				final AffineTransform3D sourceTransform = new AffineTransform3D();
+				sourceTransform.set(
+						resolution[0], 0, 0, 0,
+						0, resolution[1], 0, 0,
+						0, 0, resolution[2], 0);
 				for (int d = 0; d < source.numDimensions();)
 					if (source.dimension(d) == 1)
 						source = Views.hyperSlice(source, d, 0);
 					else ++d;
-				BdvOptions bdvOptions = source.numDimensions() == 2 ? Bdv.options().is2D() : Bdv.options();
+				BdvOptions bdvOptions = source.numDimensions() == 2 ? Bdv.options().is2D().sourceTransform(sourceTransform) : Bdv.options().sourceTransform(sourceTransform);
 				bdv = BdvFunctions.show(
 						(RandomAccessibleInterval)VolatileViews.wrapAsVolatile(
 								source,
