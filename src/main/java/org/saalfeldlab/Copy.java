@@ -169,7 +169,7 @@ public class Copy {
 			reorderIfNecessary(n5Reader, n5Writer, resolution);
 		n5Writer.setAttribute(datasetName, "resolution", resolution);
 
-		final long[] offset = n5Reader.getAttribute(datasetName, "offset", long[].class);
+		final double[] offset = n5Reader.getAttribute(datasetName, "offset", double[].class);
 		if (offset != null)
 			reorderIfNecessary(n5Reader, n5Writer, offset);
 		n5Writer.setAttribute(datasetName, "offset", offset);
