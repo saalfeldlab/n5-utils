@@ -76,7 +76,6 @@ public class View {
 		}
 	}
 
-	@SuppressWarnings("serial")
 	public static class Options implements Serializable {
 
 		protected static final boolean parseCSDoubleArray(final String csv, final double[] array) {
@@ -170,7 +169,7 @@ public class View {
 		/**
 		 * @return the readers
 		 */
-		public List<ReaderInfo> getReaderInfoss() {
+		public List<ReaderInfo> getReaderInfos() {
 
 			return readerInfos;
 		}
@@ -191,12 +190,11 @@ public class View {
 		if (!options.parsedSuccessfully)
 			return;
 
-
 		final int numProc = Runtime.getRuntime().availableProcessors();
 		final SharedQueue queue = new SharedQueue(Math.max(1, numProc / 2));
 		BdvStackSource<?> bdv = null;
 
-		for (final ReaderInfo entry : options.getReaderInfoss()) {
+		for (final ReaderInfo entry : options.getReaderInfos()) {
 
 			final N5Reader n5 = entry.n5;
 			for (int i = 0; i < entry.datasetNames.length; ++i) {
