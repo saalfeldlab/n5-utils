@@ -22,9 +22,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map.Entry;
 import java.util.concurrent.ExecutionException;
 
 import org.janelia.saalfeldlab.n5.N5FSReader;
@@ -45,9 +43,10 @@ import ch.systemsx.cisd.hdf5.HDF5Factory;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.cache.volatiles.CacheHints;
 import net.imglib2.cache.volatiles.LoadingStrategy;
+import net.imglib2.converter.Converters;
 import net.imglib2.realtransform.AffineTransform3D;
-import net.imglib2.util.Pair;
-import net.imglib2.util.ValuePair;
+import net.imglib2.type.numeric.RealType;
+import net.imglib2.type.volatiles.VolatileDoubleType;
 import net.imglib2.view.Views;
 
 /**
@@ -56,6 +55,26 @@ import net.imglib2.view.Views;
  * @author Stephan Saalfeld &lt;saalfelds@janelia.hhmi.org&gt;
  */
 public class View {
+
+	protected static class ReaderInfo {
+
+		public final N5Reader n5;
+		public final String[] datasetNames;
+		public final double[][] resolutions;
+		public final double[][] contrastRanges;
+
+		public ReaderInfo(
+				final N5Reader n5,
+				final String[] datasetNames,
+				final double[][] resolutions,
+				final double[][] contrastRanges) {
+
+			this.n5 = n5;
+			this.datasetNames = datasetNames;
+			this.resolutions = resolutions;
+			this.contrastRanges = contrastRanges;
+		}
+	}
 
 	@SuppressWarnings("serial")
 	public static class Options implements Serializable {
@@ -98,9 +117,12 @@ public class View {
 		@Option(name = "-r", aliases = {"--resolution"}, required = true, usage = "comma separated list of scale factors, e.g. '4,4,40'")
 		final List<String> resolutionStrings = null;
 
+		@Option(name = "-c", aliases = {"--contrast"}, required = true, usage = "comma separated contrast range, e.g. '0,255'")
+		final List<String> contrastStrings = null;
+
 		private boolean parsedSuccessfully = false;
 
-		private final HashMap<N5Reader, List<Pair<String, double[]>>> sourcePaths = new HashMap<>();
+		private final ArrayList<ReaderInfo> readerInfos = new ArrayList<>();
 
 		public Options(final String[] args) {
 
@@ -108,7 +130,8 @@ public class View {
 			try {
 				parser.parseArgument(args);
 				double[] resolution = new double[]{1, 1, 1};
-				for (int i = 0, j = 0; i < containerPaths.size(); ++i) {
+				double[] contrast = new double[]{0, 255};
+				for (int i = 0, j = 0, k = 0; i < containerPaths.size(); ++i) {
 					final String containerPath = containerPaths.get(i);
 					final N5Reader n5;
 					if (Files.isRegularFile(Paths.get(containerPath)))
@@ -116,15 +139,21 @@ public class View {
 					else
 						n5 = new N5FSReader(containerPath);
 
-					final String[] datasetNames = datasetLists.get(i).split(",\\s*");
-					final List<Pair<String, double[]>> datasets = new ArrayList<>();
-					for (final String datasetName : datasetNames) {
+					final String[] datasets = datasetLists.get(i).split(",\\s*");
+					final double[][] resolutions = new double[datasets.length][];
+					final double[][] contrastRanges = new double[datasets.length][];
+					for (int l = 0; l < datasets.length; ++l) {
 						if (j < resolutionStrings.size())
 							resolution = parseCSDoubleArray(resolutionStrings.get(j));
-						datasets.add(new ValuePair<String, double[]>(datasetName, resolution.clone()));
-						++j;
+						if (k < contrastStrings.size())
+							contrast = parseCSDoubleArray(contrastStrings.get(k));
+
+						resolutions[l] = resolution.clone();
+						contrastRanges[l] = contrast.clone();
+						++j; ++k;
 					}
-					sourcePaths.put(n5, datasets);
+
+					readerInfos.add(new ReaderInfo(n5, datasets, resolutions, contrastRanges));
 				}
 				parsedSuccessfully = true;
 			} catch (final CmdLineException e) {
@@ -134,14 +163,16 @@ public class View {
 		}
 
 		public boolean isParsedSuccessfully() {
+
 			return parsedSuccessfully;
 		}
 
 		/**
-		 * @return the source path tuples
+		 * @return the readers
 		 */
-		public HashMap<N5Reader, List<Pair<String, double[]>>> getSourcePaths() {
-			return sourcePaths;
+		public List<ReaderInfo> getReaderInfoss() {
+
+			return readerInfos;
 		}
 
 		/**
@@ -152,6 +183,7 @@ public class View {
 		}
 	}
 
+	@SuppressWarnings( "unchecked" )
 	public static final void main(final String... args) throws IOException, InterruptedException, ExecutionException {
 
 		final Options options = new Options(args);
@@ -164,15 +196,18 @@ public class View {
 		final SharedQueue queue = new SharedQueue(Math.max(1, numProc / 2));
 		BdvStackSource<?> bdv = null;
 
-		for (final Entry<N5Reader, List<Pair<String, double[]>>> entry : options.getSourcePaths().entrySet()) {
+		for (final ReaderInfo entry : options.getReaderInfoss()) {
 
-			final N5Reader n5 = entry.getKey();
-			for (final Pair<String, double[]> dataset : entry.getValue()) {
+			final N5Reader n5 = entry.n5;
+			for (int i = 0; i < entry.datasetNames.length; ++i) {
 
-				final String datasetName = dataset.getA();
-				final double[] resolution = dataset.getB();
-				System.out.println(entry.getKey() + " : " + datasetName + ", " + Arrays.toString(resolution));
-				RandomAccessibleInterval<?> source = N5Utils.openVolatile(n5, dataset.getA());
+				final String datasetName = entry.datasetNames[i];
+				final double[] resolution = entry.resolutions[i];
+				final double[] contrast = entry.contrastRanges[i];
+
+				System.out.println(n5 + " : " + datasetName + ", " + Arrays.toString(resolution) + ", " + Arrays.toString(contrast));
+				// this works for javac openjdk 8
+				RandomAccessibleInterval<RealType<?>> source = (RandomAccessibleInterval)N5Utils.openVolatile(n5, datasetName);
 				final AffineTransform3D sourceTransform = new AffineTransform3D();
 				sourceTransform.set(
 						resolution[0], 0, 0, 0,
@@ -183,13 +218,28 @@ public class View {
 						source = Views.hyperSlice(source, d, 0);
 					else ++d;
 				BdvOptions bdvOptions = source.numDimensions() == 2 ? Bdv.options().is2D().sourceTransform(sourceTransform) : Bdv.options().sourceTransform(sourceTransform);
-				bdv = BdvFunctions.show(
-						(RandomAccessibleInterval)VolatileViews.wrapAsVolatile(
+
+				RandomAccessibleInterval<VolatileDoubleType> convertedSource = Converters.convert(
+						VolatileViews.wrapAsVolatile(
 								source,
 								queue,
 								new CacheHints(LoadingStrategy.VOLATILE, 0, true)),
+						(a, b) -> {
+							b.setValid(a.isValid());
+							if (b.isValid()) {
+								double v = a.get().getRealDouble();
+								v -= contrast[0];
+								v /= contrast[1] - contrast[0];
+								v *= 1000;
+								b.setReal(v);
+							}
+						},
+						new VolatileDoubleType());
+				bdv = BdvFunctions.show(
+						convertedSource,
 						datasetName,
 						bdv == null ? bdvOptions : bdvOptions.addTo(bdv));
+				bdv.setDisplayRange(0, 1000);
 			}
 		}
 	}
