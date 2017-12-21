@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -146,7 +147,7 @@ public class Copy {
 			final String datasetName,
 			final int numProcessors) throws IOException, InterruptedException, ExecutionException {
 
-		final DatasetAttributes attributes = n5Reader.getDatasetAttributes(datasetName);
+		final DatasetAttributes datasetAttributes = n5Reader.getDatasetAttributes(datasetName);
 
 		final RandomAccessibleInterval<T> dataset;
 		try {
@@ -157,22 +158,29 @@ public class Copy {
 		}
 
 		if (n5Writer instanceof N5HDF5Writer)
-			N5Utils.save(dataset, n5Writer, datasetName, attributes.getBlockSize(), attributes.getCompressionType());
+			N5Utils.save(dataset, n5Writer, datasetName, datasetAttributes.getBlockSize(), datasetAttributes.getCompressionType());
 		else {
 			final ExecutorService exec = Executors.newFixedThreadPool(numProcessors);
-			N5Utils.save(dataset, n5Writer, datasetName, attributes.getBlockSize(), attributes.getCompressionType(), exec);
+			N5Utils.save(dataset, n5Writer, datasetName, datasetAttributes.getBlockSize(), datasetAttributes.getCompressionType(), exec);
 			exec.shutdown();
 		}
 
-		final double[] resolution = n5Reader.getAttribute(datasetName, "resolution", double[].class);
-		if (resolution != null)
-			reorderIfNecessary(n5Reader, n5Writer, resolution);
-		n5Writer.setAttribute(datasetName, "resolution", resolution);
+		Map<String, Class<?>> attributes = n5Reader.listAttributes(datasetName);
+		attributes.forEach(
+				(key, clazz) -> {
+					try {
+						Object attribute = n5Reader.getAttribute(datasetName, key, clazz);
+						// CREMI hack
+						if (key.equals("resolution") && clazz == double[].class)
+							reorderIfNecessary(n5Reader, n5Writer, (double[])attribute);
+						if (key.equals("offset") && clazz == double[].class)
+							reorderIfNecessary(n5Reader, n5Writer, (double[])attribute);
 
-		final double[] offset = n5Reader.getAttribute(datasetName, "offset", double[].class);
-		if (offset != null)
-			reorderIfNecessary(n5Reader, n5Writer, offset);
-		n5Writer.setAttribute(datasetName, "offset", offset);
+						n5Writer.setAttribute(datasetName, key, attribute);
+					} catch (IOException e) {
+						e.printStackTrace(System.err);
+					}
+				});
 	}
 
 	private static <T extends NativeType<T>> void copyGroup(
@@ -184,6 +192,19 @@ public class Copy {
 		System.out.println( "Copy group " + groupName );
 
 		n5Writer.createGroup(groupName);
+		Map<String, Class<?>> attributes = n5Reader.listAttributes(groupName);
+		attributes.forEach(
+				(key, clazz) -> {
+					try {
+						n5Writer.setAttribute(
+								groupName,
+								key,
+								n5Reader.getAttribute(groupName, key, clazz));
+					} catch (IOException e) {
+						e.printStackTrace(System.err);
+					}
+				});
+
 		final String[] subGroupNames = n5Reader.list(groupName);
 		for (final String subGroupName : subGroupNames) {
 			if (n5Reader.datasetExists(groupName + "/" + subGroupName))
@@ -205,6 +226,6 @@ public class Copy {
 		N5Reader n5Reader = options.getReader();
 		N5Writer n5Writer = options.getWriter();
 
-		copyGroup(n5Reader, n5Writer, "/", numProc);
+		copyGroup(n5Reader, n5Writer, "", numProc);
 	}
 }
