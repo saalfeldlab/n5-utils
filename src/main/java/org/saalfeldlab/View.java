@@ -113,10 +113,10 @@ public class View {
 		@Option(name = "-d", aliases = {"--datasets"}, required = true, usage = "comma separated list of datasets, e.g. '/slab-26,slab-27'")
 		final List<String> datasetLists = null;
 
-		@Option(name = "-r", aliases = {"--resolution"}, required = true, usage = "comma separated list of scale factors, e.g. '4,4,40'")
+		@Option(name = "-r", aliases = {"--resolution"}, usage = "comma separated list of scale factors, e.g. '4,4,40'")
 		final List<String> resolutionStrings = null;
 
-		@Option(name = "-c", aliases = {"--contrast"}, required = true, usage = "comma separated contrast range, e.g. '0,255'")
+		@Option(name = "-c", aliases = {"--contrast"}, usage = "comma separated contrast range, e.g. '0,255'")
 		final List<String> contrastStrings = null;
 
 		private boolean parsedSuccessfully = false;
@@ -142,9 +142,9 @@ public class View {
 					final double[][] resolutions = new double[datasets.length][];
 					final double[][] contrastRanges = new double[datasets.length][];
 					for (int l = 0; l < datasets.length; ++l) {
-						if (j < resolutionStrings.size())
+						if (resolutionStrings != null && j < resolutionStrings.size())
 							resolution = parseCSDoubleArray(resolutionStrings.get(j));
-						if (k < contrastStrings.size())
+						if (contrastStrings != null && k < contrastStrings.size())
 							contrast = parseCSDoubleArray(contrastStrings.get(k));
 
 						resolutions[l] = resolution.clone();
@@ -215,9 +215,9 @@ public class View {
 					if (source.dimension(d) == 1)
 						source = Views.hyperSlice(source, d, 0);
 					else ++d;
-				BdvOptions bdvOptions = source.numDimensions() == 2 ? Bdv.options().is2D().sourceTransform(sourceTransform) : Bdv.options().sourceTransform(sourceTransform);
+				final BdvOptions bdvOptions = source.numDimensions() == 2 ? Bdv.options().is2D().sourceTransform(sourceTransform) : Bdv.options().sourceTransform(sourceTransform);
 
-				RandomAccessibleInterval<VolatileDoubleType> convertedSource = Converters.convert(
+				final RandomAccessibleInterval<VolatileDoubleType> convertedSource = Converters.convert(
 						VolatileViews.wrapAsVolatile(
 								source,
 								queue,
