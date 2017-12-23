@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -56,6 +57,9 @@ public class Copy {
 
 		@Option(name = "-o", aliases = {"--outputContainer"}, required = true, usage = "container path, e.g. /nrs/flyem/data/tmp/Z0115-22.n5")
 		private String outputContainerPath = null;
+
+		@Option(name = "-d", aliases = {"--group"}, usage = "group or dataset name, e.g. /volumes/raw")
+		private List<String> groupNames = null;
 
 		@Option(name = "-b", aliases = {"--blockSize"}, usage = "override blockSize of input datasets, e.g. 256,256,26")
 		private String blockSizeString = null;
@@ -164,6 +168,11 @@ public class Copy {
 		public CompressionType getCompression() {
 
 			return compression;
+		}
+
+		public List<String> getGroupNames() {
+
+			return groupNames;
 		}
 
 		public boolean isParsedSuccessfully() {
@@ -315,6 +324,18 @@ public class Copy {
 		final CompressionType compression = options.getCompression();
 		final int numProc = Runtime.getRuntime().availableProcessors();
 
-		copyGroup(n5Reader, n5Writer, "", blockSize, compression, numProc);
+		final List<String> groupNames = options.getGroupNames();
+
+		if (groupNames == null)
+			copyGroup(n5Reader, n5Writer, "", blockSize, compression, numProc);
+		else {
+			for (final String groupName : groupNames)
+				if (n5Reader.exists(groupName)) {
+					if (n5Reader.datasetExists(groupName))
+						copyDataset(n5Reader, n5Writer, groupName, blockSize, compression, numProc);
+					else
+						copyGroup(n5Reader, n5Writer, groupName, blockSize, compression, numProc);
+				}
+		}
 	}
 }
