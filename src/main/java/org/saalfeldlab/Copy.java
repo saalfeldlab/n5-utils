@@ -26,12 +26,17 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import org.janelia.saalfeldlab.n5.CompressionType;
+import org.janelia.saalfeldlab.n5.Bzip2Compression;
+import org.janelia.saalfeldlab.n5.Compression;
 import org.janelia.saalfeldlab.n5.DatasetAttributes;
+import org.janelia.saalfeldlab.n5.GzipCompression;
+import org.janelia.saalfeldlab.n5.Lz4Compression;
 import org.janelia.saalfeldlab.n5.N5FSReader;
 import org.janelia.saalfeldlab.n5.N5FSWriter;
 import org.janelia.saalfeldlab.n5.N5Reader;
 import org.janelia.saalfeldlab.n5.N5Writer;
+import org.janelia.saalfeldlab.n5.RawCompression;
+import org.janelia.saalfeldlab.n5.XzCompression;
 import org.janelia.saalfeldlab.n5.hdf5.N5HDF5Reader;
 import org.janelia.saalfeldlab.n5.hdf5.N5HDF5Writer;
 import org.janelia.saalfeldlab.n5.imglib2.N5Utils;
@@ -49,29 +54,35 @@ import net.imglib2.type.NativeType;
  */
 public class Copy {
 
+	protected final N5Reader n5Reader;
+	protected final N5Writer n5Writer;
+	protected final int[] blockSize;
+	protected final Compression compression;
+	protected final int numProc;
+
 	@SuppressWarnings("serial")
 	public static class Options implements Serializable {
 
-		@Option(name = "-i", aliases = {"--inputContainer"}, required = true, usage = "container path, e.g. /nrs/flyem/data/tmp/Z0115-22.h5")
+		@Option(name = "-i", aliases = { "--inputContainer" }, required = true, usage = "container path, e.g. /nrs/flyem/data/tmp/Z0115-22.h5")
 		private String inputContainerPath = null;
 
-		@Option(name = "-o", aliases = {"--outputContainer"}, required = true, usage = "container path, e.g. /nrs/flyem/data/tmp/Z0115-22.n5")
+		@Option(name = "-o", aliases = { "--outputContainer" }, required = true, usage = "container path, e.g. /nrs/flyem/data/tmp/Z0115-22.n5")
 		private String outputContainerPath = null;
 
-		@Option(name = "-d", aliases = {"--group"}, usage = "group or dataset name, e.g. /volumes/raw")
+		@Option(name = "-d", aliases = { "--group" }, usage = "group or dataset name, e.g. /volumes/raw")
 		private List<String> groupNames = null;
 
-		@Option(name = "-b", aliases = {"--blockSize"}, usage = "override blockSize of input datasets, e.g. 256,256,26")
+		@Option(name = "-b", aliases = { "--blockSize" }, usage = "override blockSize of input datasets, e.g. 256,256,26")
 		private String blockSizeString = null;
 
-		@Option(name = "-c", aliases = {"--compression"}, usage = "override compression type of input datasets, e.g. 256,256,26")
+		@Option(name = "-c", aliases = { "--compression" }, usage = "override compression type of input datasets, e.g. 256,256,26")
 		private String compressionString = "";
 
 		private boolean parsedSuccessfully = false;
 		private N5Reader n5Reader;
 		private N5Writer n5Writer;
 		private int[] blockSize;
-		private CompressionType compression;
+		private Compression compression;
 
 		protected static final int[] parseCSIntArray(final String csv) {
 
@@ -116,27 +127,27 @@ public class Copy {
 					case "raw":
 					case "RAW":
 					case "Raw":
-							compression = CompressionType.RAW;
+						compression = new RawCompression();
 						break;
 					case "bzip2":
 					case "BZIP2":
 					case "Bzip2":
-							compression = CompressionType.BZIP2;
+						compression = new Bzip2Compression();
 						break;
 					case "lz4":
 					case "LZ4":
 					case "Lz4":
-							compression = CompressionType.LZ4;
+						compression = new Lz4Compression();
 						break;
 					case "xz":
 					case "XZ":
 					case "Xz":
-							compression = CompressionType.XZ;
+						compression = new XzCompression();
 						break;
 					case "gzip":
 					case "GZIP":
 					case "Gzip":
-							compression = CompressionType.GZIP;
+						compression = new GzipCompression();
 						break;
 					default:
 						compression = null;
@@ -165,7 +176,7 @@ public class Copy {
 			return blockSize;
 		}
 
-		public CompressionType getCompression() {
+		public Compression getCompression() {
 
 			return compression;
 		}
@@ -181,7 +192,16 @@ public class Copy {
 		}
 	}
 
-	private static void reorder(final long[] array) {
+	public Copy(final Options options) {
+
+		n5Reader = options.getReader();
+		n5Writer = options.getWriter();
+		blockSize = options.getBlockSize();
+		compression = options.getCompression();
+		numProc = Runtime.getRuntime().availableProcessors();
+	}
+
+	protected static void reorder(final long[] array) {
 
 		long a;
 		final int max = array.length - 1;
@@ -193,7 +213,7 @@ public class Copy {
 		}
 	}
 
-	private static void reorder(final double[] array) {
+	protected static void reorder(final double[] array) {
 
 		double a;
 		final int max = array.length - 1;
@@ -205,31 +225,21 @@ public class Copy {
 		}
 	}
 
-	private static void reorderIfNecessary(
-			final N5Reader n5Reader,
-			final N5Writer n5Writer,
+	protected void reorderIfNecessary(
 			final double[] array) {
 
-		if (!(n5Reader.getClass().isInstance(n5Writer) ||  n5Writer.getClass().isInstance(n5Reader)))
+		if (!(n5Reader.getClass().isInstance(n5Writer) || n5Writer.getClass().isInstance(n5Reader)))
 			reorder(array);
 	}
 
-	private static void reorderIfNecessary(
-			final N5Reader n5Reader,
-			final N5Writer n5Writer,
+	protected void reorderIfNecessary(
 			final long[] array) {
 
-		if (!(n5Reader.getClass().isInstance(n5Writer) ||  n5Writer.getClass().isInstance(n5Reader)))
+		if (!(n5Reader.getClass().isInstance(n5Writer) || n5Writer.getClass().isInstance(n5Reader)))
 			reorder(array);
 	}
 
-	private static <T extends NativeType<T>> void copyDataset(
-			final N5Reader n5Reader,
-			final N5Writer n5Writer,
-			final String datasetName,
-			final int[] blockSize,
-			final CompressionType compression,
-			final int numProcessors) throws IOException, InterruptedException, ExecutionException {
+	protected <T extends NativeType<T>> void copyDataset(final String datasetName) throws IOException, InterruptedException, ExecutionException {
 
 		final DatasetAttributes datasetAttributes = n5Reader.getDatasetAttributes(datasetName);
 
@@ -247,94 +257,71 @@ public class Copy {
 					n5Writer,
 					datasetName,
 					blockSize == null || blockSize.length != dataset.numDimensions() ? datasetAttributes.getBlockSize() : blockSize,
-					compression == null ? datasetAttributes.getCompressionType() : compression);
+					compression == null ? datasetAttributes.getCompression() : compression);
 		else {
-			final ExecutorService exec = Executors.newFixedThreadPool(numProcessors);
+			final ExecutorService exec = Executors.newFixedThreadPool(numProc);
 			N5Utils.save(
 					dataset,
 					n5Writer,
 					datasetName,
 					blockSize == null || blockSize.length != dataset.numDimensions() ? datasetAttributes.getBlockSize() : blockSize,
-					compression == null ? datasetAttributes.getCompressionType() : compression,
+					compression == null ? datasetAttributes.getCompression() : compression,
 					exec);
 			exec.shutdown();
 		}
 
-		final Map<String, Class<?>> attributes = n5Reader.listAttributes(datasetName);
-		attributes.forEach(
-				(key, clazz) -> {
-					try {
-						final Object attribute = n5Reader.getAttribute(datasetName, key, clazz);
-						// CREMI hack
-						if (key.equals("resolution") && clazz == double[].class)
-							reorderIfNecessary(n5Reader, n5Writer, (double[])attribute);
-						if (key.equals("offset") && clazz == double[].class)
-							reorderIfNecessary(n5Reader, n5Writer, (double[])attribute);
-
-						n5Writer.setAttribute(datasetName, key, attribute);
-					} catch (final IOException e) {
-						e.printStackTrace(System.err);
-					}
-				});
+		copyAttributes(datasetName);
 	}
 
-	private static <T extends NativeType<T>> void copyGroup(
-			final N5Reader n5Reader,
-			final N5Writer n5Writer,
-			final String groupName,
-			final int[] blockSize,
-			final CompressionType compression,
-			final int numProcessors) throws IOException, InterruptedException, ExecutionException {
+	protected void copyAttributes(final String groupName)
+			throws IOException {
 
-		System.out.println( "Copy group " + groupName );
+		final Map<String, Class<?>> attributes = n5Reader.listAttributes(groupName);
+		attributes.forEach((key, clazz) -> {
+			try {
+				n5Writer.setAttribute(groupName, key, n5Reader.getAttribute(groupName, key, clazz));
+			} catch (final IOException e) {
+				e.printStackTrace(System.err);
+			}
+		});
+	}
+
+	protected <T extends NativeType<T>> void copyGroup(final String groupName) throws IOException, InterruptedException, ExecutionException {
+
+		System.out.println("Copy group " + groupName);
 
 		n5Writer.createGroup(groupName);
-		final Map<String, Class<?>> attributes = n5Reader.listAttributes(groupName);
-		attributes.forEach(
-				(key, clazz) -> {
-					try {
-						n5Writer.setAttribute(
-								groupName,
-								key,
-								n5Reader.getAttribute(groupName, key, clazz));
-					} catch (final IOException e) {
-						e.printStackTrace(System.err);
-					}
-				});
+		copyAttributes(groupName);
 
 		final String[] subGroupNames = n5Reader.list(groupName);
 		for (final String subGroupName : subGroupNames) {
 			if (n5Reader.datasetExists(groupName + "/" + subGroupName))
-				copyDataset(n5Reader, n5Writer, groupName + "/" + subGroupName, blockSize, compression, numProcessors);
+				copyDataset(groupName + "/" + subGroupName);
 			else
-				copyGroup(n5Reader, n5Writer, groupName + "/" + subGroupName, blockSize, compression, numProcessors);
+				copyGroup(groupName + "/" + subGroupName);
 		}
 	}
 
-	public static final void main(final String... args) throws IOException, InterruptedException, ExecutionException {
+	public static void main(final String... args) throws IOException, InterruptedException, ExecutionException {
 
 		final Options options = new Options(args);
 
 		if (!options.parsedSuccessfully)
 			return;
 
-		final N5Reader n5Reader = options.getReader();
-		final N5Writer n5Writer = options.getWriter();
-		final int[] blockSize = options.getBlockSize();
-		final CompressionType compression = options.getCompression();
-		final int numProc = Runtime.getRuntime().availableProcessors();
+		final Copy copy = new Copy(options);
 
 		final List<String> groupNames = options.getGroupNames();
 
 		if (groupNames == null)
-			copyGroup(n5Reader, n5Writer, "", blockSize, compression, numProc);
+			copy.copyGroup("");
 		else {
 			for (final String groupName : groupNames)
-				if (n5Reader.exists(groupName)) {
-					if (n5Reader.datasetExists(groupName))
-						copyDataset(n5Reader, n5Writer, groupName, blockSize, compression, numProc);
+				if (copy.n5Reader.exists(groupName)) {
+					if (copy.n5Reader.datasetExists(groupName))
+						copy.copyDataset(groupName);
 					else
-						copyGroup(n5Reader, n5Writer, groupName, blockSize, compression, numProc);
+						copy.copyGroup(groupName);
 				}
 		}
 	}

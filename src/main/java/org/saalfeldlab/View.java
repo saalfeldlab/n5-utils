@@ -123,7 +123,7 @@ public class View {
 
 		private final ArrayList<ReaderInfo> readerInfos = new ArrayList<>();
 
-		public Options(final String[] args) {
+		public Options(final String[] args) throws NumberFormatException, IOException {
 
 			final CmdLineParser parser = new CmdLineParser(this);
 			try {
