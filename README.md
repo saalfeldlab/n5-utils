@@ -1,4 +1,4 @@
-# simple-viewer
+# n5-utils
 simple standalone BigDataViewer for multiple N5 (or HDF5) datasets
 and also a copy tool
 
