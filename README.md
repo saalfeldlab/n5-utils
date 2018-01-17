@@ -1,6 +1,6 @@
 # n5-utils
-simple standalone BigDataViewer for multiple N5 (or HDF5) datasets
-and also a copy tool
+Simple standalone BigDataViewer for multiple N5 (or HDF5) datasets
+and also a copy, rechunking, and recompressing tool for N5 and HDF5.
 
 Build a fat jar with
 ```bash
@@ -25,7 +25,7 @@ java -jar target/simple-viewer-0.0.1-SNAPSHOT.jar \
 ```
 to look at two datasets from an HDF5 and an N5 container at 1x1x10 resolution and contrast ranges [0,255] and [-1,1].  The viewer maps both contrast ranges into [0,1000] because BDV cannot yet deal with negative intensities and the sliders only show integers.  Sorry for the hack.
 
-Copy from N5/HDF5 to N5/HDF5
+Copy from N5/HDF5 to N5/HDF5:
 ```bash
 java -cp target/simple-viewer-0.0.1-SNAPSHOT.jar org.saalfeldlab.Copy \
   -i '/path/file.hdf5' \
@@ -33,7 +33,7 @@ java -cp target/simple-viewer-0.0.1-SNAPSHOT.jar org.saalfeldlab.Copy \
   -b 256,256,26
   -c gzip
 ```
-or
+or for one or more groups/ datasets:
 ```bash
 java -cp target/simple-viewer-0.0.1-SNAPSHOT.jar org.saalfeldlab.Copy \
   -i '/path/file.hdf5' \
@@ -42,4 +42,5 @@ java -cp target/simple-viewer-0.0.1-SNAPSHOT.jar org.saalfeldlab.Copy \
   -c gzip
   -d /volumes
 ```
-for one or more groups/ datasets.
+
+Replace `Copy` with `CopyCREMI` if your data is a CREMI file and you want the `offset` and `resolution` attributes ordered like the rest of the API (row major in HDF5 and column major in N5).
