@@ -20,8 +20,10 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -241,6 +243,8 @@ public class Copy {
 
 	protected <T extends NativeType<T>> void copyDataset(final String datasetName) throws IOException, InterruptedException, ExecutionException {
 
+		System.out.println(datasetName);
+
 		final DatasetAttributes datasetAttributes = n5Reader.getDatasetAttributes(datasetName);
 
 		final RandomAccessibleInterval<T> dataset;
@@ -276,19 +280,31 @@ public class Copy {
 	protected void copyAttributes(final String groupName)
 			throws IOException {
 
+		System.out.println("  attributes:");
+
 		final Map<String, Class<?>> attributes = n5Reader.listAttributes(groupName);
+		final DatasetAttributes datasetAttributes = n5Reader.getDatasetAttributes(groupName);
+		final Set<String> datasetAttributeKeys = datasetAttributes == null ? new HashSet<>() : datasetAttributes.asMap().keySet();
+
 		attributes.forEach((key, clazz) -> {
-			try {
-				n5Writer.setAttribute(groupName, key, n5Reader.getAttribute(groupName, key, clazz));
-			} catch (final IOException e) {
-				e.printStackTrace(System.err);
+
+			if (datasetAttributeKeys.contains(key)) {
+				System.out.println("    skipping dataset attribute " + key + " : " + clazz);
+			} else {
+				System.out.println("    " + key + " : " + clazz);
+
+				try {
+					n5Writer.setAttribute(groupName, key, n5Reader.getAttribute(groupName, key, clazz));
+				} catch (final IOException e) {
+					e.printStackTrace(System.err);
+				}
 			}
 		});
 	}
 
 	protected <T extends NativeType<T>> void copyGroup(final String groupName) throws IOException, InterruptedException, ExecutionException {
 
-		System.out.println("Copy group " + groupName);
+		System.out.println(groupName);
 
 		n5Writer.createGroup(groupName);
 		copyAttributes(groupName);
