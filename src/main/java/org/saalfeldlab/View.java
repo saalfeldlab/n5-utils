@@ -191,7 +191,7 @@ public class View {
 			return;
 
 		final int numProc = Runtime.getRuntime().availableProcessors();
-		final SharedQueue queue = new SharedQueue(Math.max(1, numProc / 2));
+		final SharedQueue queue = new SharedQueue(Math.min(8, Math.max(1, numProc / 2)));
 		BdvStackSource<?> bdv = null;
 
 		for (final ReaderInfo entry : options.getReaderInfos()) {
