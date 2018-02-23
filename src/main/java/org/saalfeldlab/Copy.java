@@ -283,7 +283,8 @@ public class Copy {
 		System.out.println("  attributes:");
 
 		final Map<String, Class<?>> attributes = n5Reader.listAttributes(groupName);
-		final DatasetAttributes datasetAttributes = n5Reader.getDatasetAttributes(groupName);
+
+		final DatasetAttributes datasetAttributes = n5Reader.datasetExists(groupName) ? n5Reader.getDatasetAttributes(groupName) : null;
 		final Set<String> datasetAttributeKeys = datasetAttributes == null ? new HashSet<>() : datasetAttributes.asMap().keySet();
 
 		attributes.forEach((key, clazz) -> {
