@@ -37,16 +37,20 @@ import bdv.util.Bdv;
 import bdv.util.BdvFunctions;
 import bdv.util.BdvOptions;
 import bdv.util.BdvStackSource;
+import bdv.util.RandomAccessibleIntervalMipmapSource;
 import bdv.util.volatiles.SharedQueue;
 import bdv.util.volatiles.VolatileViews;
 import ch.systemsx.cisd.hdf5.HDF5Factory;
+import mpicbg.spim.data.sequence.FinalVoxelDimensions;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.cache.volatiles.CacheHints;
 import net.imglib2.cache.volatiles.LoadingStrategy;
 import net.imglib2.converter.Converters;
-import net.imglib2.realtransform.AffineTransform3D;
+import net.imglib2.type.NativeType;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.volatiles.VolatileDoubleType;
+import net.imglib2.util.Pair;
+import net.imglib2.util.ValuePair;
 import net.imglib2.view.Views;
 
 /**
@@ -59,18 +63,18 @@ public class View {
 	protected static class ReaderInfo {
 
 		public final N5Reader n5;
-		public final String[] datasetNames;
+		public final String[] groupNames;
 		public final double[][] resolutions;
 		public final double[][] contrastRanges;
 
 		public ReaderInfo(
 				final N5Reader n5,
-				final String[] datasetNames,
+				final String[] groupNames,
 				final double[][] resolutions,
 				final double[][] contrastRanges) {
 
 			this.n5 = n5;
-			this.datasetNames = datasetNames;
+			this.groupNames = groupNames;
 			this.resolutions = resolutions;
 			this.contrastRanges = contrastRanges;
 		}
@@ -111,7 +115,7 @@ public class View {
 		private final List<String> containerPaths = null;
 
 		@Option(name = "-d", aliases = {"--datasets"}, required = true, usage = "comma separated list of datasets, e.g. '/slab-26,slab-27'")
-		final List<String> datasetLists = null;
+		final List<String> groupLists = null;
 
 		@Option(name = "-r", aliases = {"--resolution"}, usage = "comma separated list of scale factors, e.g. '4,4,40'")
 		final List<String> resolutionStrings = null;
@@ -138,10 +142,10 @@ public class View {
 					else
 						n5 = new N5FSReader(containerPath);
 
-					final String[] datasets = datasetLists.get(i).split(",\\s*");
-					final double[][] resolutions = new double[datasets.length][];
-					final double[][] contrastRanges = new double[datasets.length][];
-					for (int l = 0; l < datasets.length; ++l) {
+					final String[] groups = groupLists.get(i).split(",\\s*");
+					final double[][] resolutions = new double[groups.length][];
+					final double[][] contrastRanges = new double[groups.length][];
+					for (int l = 0; l < groups.length; ++l) {
 						if (resolutionStrings != null && j < resolutionStrings.size())
 							resolution = parseCSDoubleArray(resolutionStrings.get(j));
 						if (contrastStrings != null && k < contrastStrings.size())
@@ -152,7 +156,7 @@ public class View {
 						++j; ++k;
 					}
 
-					readerInfos.add(new ReaderInfo(n5, datasets, resolutions, contrastRanges));
+					readerInfos.add(new ReaderInfo(n5, groups, resolutions, contrastRanges));
 				}
 				parsedSuccessfully = true;
 			} catch (final CmdLineException e) {
@@ -197,45 +201,73 @@ public class View {
 		for (final ReaderInfo entry : options.getReaderInfos()) {
 
 			final N5Reader n5 = entry.n5;
-			for (int i = 0; i < entry.datasetNames.length; ++i) {
+			for (int i = 0; i < entry.groupNames.length; ++i) {
 
-				final String datasetName = entry.datasetNames[i];
+				final String groupName = entry.groupNames[i];
 				final double[] resolution = entry.resolutions[i];
 				final double[] contrast = entry.contrastRanges[i];
 
-				System.out.println(n5 + " : " + datasetName + ", " + Arrays.toString(resolution) + ", " + Arrays.toString(contrast));
-				// this works for javac openjdk 8
-				RandomAccessibleInterval<RealType<?>> source = (RandomAccessibleInterval)N5Utils.openVolatile(n5, datasetName);
-				final AffineTransform3D sourceTransform = new AffineTransform3D();
-				sourceTransform.set(
-						resolution[0], 0, 0, 0,
-						0, resolution[1], 0, 0,
-						0, 0, resolution[2], 0);
-				for (int d = 0; d < source.numDimensions();)
-					if (source.dimension(d) == 1)
-						source = Views.hyperSlice(source, d, 0);
-					else ++d;
-				final BdvOptions bdvOptions = source.numDimensions() == 2 ? Bdv.options().is2D().sourceTransform(sourceTransform) : Bdv.options().sourceTransform(sourceTransform);
+				System.out.println(n5 + " : " + groupName + ", " + Arrays.toString(resolution) + ", " + Arrays.toString(contrast));
 
-				final RandomAccessibleInterval<VolatileDoubleType> convertedSource = Converters.convert(
-						VolatileViews.wrapAsVolatile(
-								source,
-								queue,
-								new CacheHints(LoadingStrategy.VOLATILE, 0, true)),
-						(a, b) -> {
-							b.setValid(a.isValid());
-							if (b.isValid()) {
-								double v = a.get().getRealDouble();
-								v -= contrast[0];
-								v /= contrast[1] - contrast[0];
-								v *= 1000;
-								b.setReal(v);
-							}
-						},
-						new VolatileDoubleType());
+				final Pair<RandomAccessibleInterval<NativeType>[], double[][]> n5Sources;
+				int n;
+				if (n5.datasetExists(groupName)) {
+					// this works for javac openjdk 8
+					final RandomAccessibleInterval<NativeType> source = (RandomAccessibleInterval)N5Utils.openVolatile(n5, groupName);
+					n = source.numDimensions();
+					final double[] scale = new double[n];
+					Arrays.fill(scale, 1);
+					n5Sources = new ValuePair<RandomAccessibleInterval<NativeType>[], double[][]>(new RandomAccessibleInterval[] {source}, new double[][]{scale});
+				}
+				else {
+					n5Sources = N5Utils.openMipmaps(n5, groupName, true);
+					n = n5Sources.getA()[0].numDimensions();
+				}
+
+				/* remove 1-size dimensions */
+				for (int d = 0; d < n;) {
+					final RandomAccessibleInterval<NativeType>[] ras = n5Sources.getA();
+					if (ras[0].dimension(d) == 1)
+						for (int k = 0; k < ras.length; ++k)
+							ras[k] = Views.hyperSlice(ras[k], d, 0);
+					else ++d;
+				}
+				n = n5Sources.getA()[0].numDimensions();
+
+				final BdvOptions bdvOptions = n == 2 ? Bdv.options().is2D() : Bdv.options();
+
+				final RandomAccessibleInterval<VolatileDoubleType>[] convertedSources = (RandomAccessibleInterval<VolatileDoubleType>[])new RandomAccessibleInterval[n5Sources.getA().length];
+				for (int k = 0; k < n5Sources.getA().length; ++k) {
+					convertedSources[k] = Converters.convert(
+							VolatileViews.wrapAsVolatile(
+									(RandomAccessibleInterval<RealType>)(RandomAccessibleInterval)n5Sources.getA()[k],
+									queue,
+									new CacheHints(LoadingStrategy.VOLATILE, 0, true)),
+							(a, b) -> {
+								b.setValid(a.isValid());
+								if (b.isValid()) {
+									double v = a.get().getRealDouble();
+									v -= contrast[0];
+									v /= contrast[1] - contrast[0];
+									v *= 1000;
+									b.setReal(v);
+								}
+							},
+							new VolatileDoubleType());
+					final double[] scale = n5Sources.getB()[k];
+					Arrays.setAll(scale, j -> scale[j] * resolution[j]);
+				}
+
+				final RandomAccessibleIntervalMipmapSource<VolatileDoubleType> mipmapSource =
+						new RandomAccessibleIntervalMipmapSource<VolatileDoubleType>(
+								convertedSources,
+								new VolatileDoubleType(),
+								n5Sources.getB(),
+								new FinalVoxelDimensions("px", resolution),
+								groupName);
+
 				bdv = BdvFunctions.show(
-						convertedSource,
-						datasetName,
+						mipmapSource,
 						bdv == null ? bdvOptions : bdvOptions.addTo(bdv));
 				bdv.setDisplayRange(0, 1000);
 			}
