@@ -1,6 +1,7 @@
 # n5-utils
 Simple standalone BigDataViewer for multiple N5 (or HDF5) datasets
-and also a copy, rechunking, and recompressing tool for N5 and HDF5.
+or mipmap pyramids and also a copy, rechunking, and recompressing
+tool for N5 and HDF5.
 
 Installation requires maven, OpenJDK8, and lib-hdf5, on Ubuntu:
 ```bash
@@ -27,7 +28,7 @@ n5-view \
   -c -1,1 \
   -r 1,1,10
 ```
-to look at two datasets from an HDF5 and an N5 container at 1x1x10 resolution and contrast ranges [0,255] and [-1,1].  The viewer maps both contrast ranges into [0,1000] because BDV cannot yet deal with negative intensities and the sliders only show integers.  Sorry for the hack.
+to look at two datasets or mipmap pyramids from an HDF5 and an N5 container at 1x1x10 resolution and contrast ranges [0,255] and [-1,1].  The viewer maps both contrast ranges into [0,1000] because BDV cannot yet deal with negative intensities and the sliders only show integers.  Sorry for the hack.
 
 Copy from N5/HDF5 to N5/HDF5:
 ```bash
