@@ -2,19 +2,23 @@
 Simple standalone BigDataViewer for multiple N5 (or HDF5) datasets
 and also a copy, rechunking, and recompressing tool for N5 and HDF5.
 
-Build a fat jar with
+Installation requires maven, OpenJDK8, and lib-hdf5, on Ubuntu:
 ```bash
-mvn clean package
+sudo apt-get install openjdk-8-jdk maven hdf5-tools
 ```
-If this fails, check out the missing SNAPSHOT dependency projects (bigdataviewer-core, bigdataviewer-vistools at branch volatiletypes) from GitHub and
+On other platforms, please find your way and report back if interested.
+
+Install into your favorite local binary `$PATH`:
 ```bash
-mvn clean install
+./install $HOME/bin
 ```
-them.  Sorry for that, but we need these changes and there are no releases yet.
+All dependencies will be downloaded and managed by maven automatically.
+
+This installs three tools, `n5-view`, `n5-copy`, and `n5-copy-cremi`.
 
 Run the viewer
 ```bash
-java -jar target/simple-viewer-0.0.1-SNAPSHOT.jar \
+n5-view \
   -i '/path/file.h5' \
   -i '/path/file.hdf5' \
   -d /volumes/raw \
@@ -27,7 +31,7 @@ to look at two datasets from an HDF5 and an N5 container at 1x1x10 resolution an
 
 Copy from N5/HDF5 to N5/HDF5:
 ```bash
-java -cp target/simple-viewer-0.0.1-SNAPSHOT.jar org.saalfeldlab.Copy \
+n5-copy \
   -i '/path/file.hdf5' \
   -o '/path/file.n5' \
   -b 256,256,26
@@ -35,7 +39,7 @@ java -cp target/simple-viewer-0.0.1-SNAPSHOT.jar org.saalfeldlab.Copy \
 ```
 or for one or more groups/ datasets:
 ```bash
-java -cp target/simple-viewer-0.0.1-SNAPSHOT.jar org.saalfeldlab.Copy \
+c5-copy \
   -i '/path/file.hdf5' \
   -o '/path/file.n5' \
   -b 256,256,26
@@ -43,4 +47,4 @@ java -cp target/simple-viewer-0.0.1-SNAPSHOT.jar org.saalfeldlab.Copy \
   -d /volumes
 ```
 
-Replace `Copy` with `CopyCREMI` if your data is a CREMI file and you want the `offset` and `resolution` attributes ordered like the rest of the API (row major in HDF5 and column major in N5).
+Replace `n5-copy` with `n5-copy-cremi` if your data is a CREMI file and you want the `offset` and `resolution` attributes ordered like the rest of the API (row major in HDF5 and column major in N5).
