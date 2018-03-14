@@ -1,0 +1,55 @@
+#!/bin/bash
+
+INSTALL_DIR=${1:-$(pwd)}
+
+echo "Installing into $INSTALL_DIR"
+
+mvn clean install
+mvn -Dmdep.outputFile=cp.txt -Dmdep.includeScope=runtime dependency:build-classpath
+
+MEM=$(cat /proc/meminfo | grep MemTotal | sed s/^MemTotal:\\\s*\\\|\\\s\\+[^\\\s]*$//g)
+MEM=$(($MEM/2/1024/1024))
+
+echo '#!/bin/bash' > n5-view
+echo '' >> n5-view
+echo 'JAR=$HOME/.m2/repository/org/saalfeldlab/n5-utils/0.0.2-SNAPSHOT/n5-utils-0.0.2-SNAPSHOT.jar' >> n5-view
+echo 'java \' >> n5-view
+echo "  -Xmx${MEM}g \\" >> n5-view
+echo '  -XX:+UseConcMarkSweepGC \' >> n5-view
+echo -n '  -cp $JAR:' >> n5-view
+echo -n $(cat cp.txt) >> n5-view
+echo ' \' >> n5-view
+echo '  org.saalfeldlab.View $@' >> n5-view
+
+chmod a+x n5-view
+
+echo '#!/bin/bash' > n5-copy
+echo '' >> n5-copy
+echo 'JAR=$HOME/.m2/repository/org/saalfeldlab/n5-utils/0.0.2-SNAPSHOT/n5-utils-0.0.2-SNAPSHOT.jar' >> n5-copy
+echo 'java \' >> n5-copy
+echo "  -Xmx${MEM}g \\" >> n5-copy
+echo -n '  -cp $JAR:' >> n5-copy
+echo -n $(cat cp.txt) >> n5-copy
+echo ' \' >> n5-copy
+echo '  org.saalfeldlab.Copy $@' >> n5-copy
+
+chmod a+x n5-copy
+
+echo '#!/bin/bash' > n5-copy-cremi
+echo '' >> n5-copy-cremi
+echo 'JAR=$HOME/.m2/repository/org/saalfeldlab/n5-utils/0.0.2-SNAPSHOT/n5-utils-0.0.2-SNAPSHOT.jar' >> n5-copy-cremi
+echo 'java \' >> n5-copy-cremi
+echo "  -Xmx${MEM}g \\" >> n5-copy-cremi
+echo -n '  -cp $JAR:' >> n5-copy-cremi
+echo -n $(cat cp.txt) >> n5-copy-cremi
+echo ' \' >> n5-copy-cremi
+echo '  org.saalfeldlab.CopyCREMI $@' >> n5-copy-cremi
+
+chmod a+x n5-copy-cremi
+rm cp.txt
+
+mkdir -p $INSTALL_DIR
+mv n5-view $INSTALL_DIR/
+mv n5-copy $INSTALL_DIR/
+mv n5-copy-cremi $INSTALL_DIR/
+
