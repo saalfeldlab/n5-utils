@@ -77,7 +77,7 @@ public class Copy {
 		@Option(name = "-b", aliases = { "--blockSize" }, usage = "override blockSize of input datasets, e.g. 256,256,26")
 		private String blockSizeString = null;
 
-		@Option(name = "-c", aliases = { "--compression" }, usage = "override compression type of input datasets, e.g. 256,256,26")
+		@Option(name = "-c", aliases = { "--compression" }, usage = "override compression type of input datasets, e.g. gzip")
 		private String compressionString = "";
 
 		private boolean parsedSuccessfully = false;

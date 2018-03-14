@@ -111,16 +111,16 @@ public class View {
 			return array;
 		}
 
-		@Option(name = "-i", aliases = {"--container"}, required = true, usage = "container path, e.g. /nrs/flyem/data/tmp/Z0115-22.n5")
+		@Option(name = "-i", aliases = {"--container"}, required = true, usage = "container paths, e.g. -i $HOME/fib19.n5 -i /nrs/flyem ...")
 		private final List<String> containerPaths = null;
 
-		@Option(name = "-d", aliases = {"--datasets"}, required = true, usage = "comma separated list of datasets, e.g. '/slab-26,slab-27'")
+		@Option(name = "-d", aliases = {"--datasets"}, required = true, usage = "comma separated list of datasets, one list per container, e.g. -d '/slab-26,slab-27' -d '/volumes/raw' ...")
 		final List<String> groupLists = null;
 
-		@Option(name = "-r", aliases = {"--resolution"}, usage = "comma separated list of scale factors, e.g. '4,4,40'")
+		@Option(name = "-r", aliases = {"--resolution"}, usage = "comma separated list of scale factors, one per dataset or all following the last, e.g. -r '4,4,40'")
 		final List<String> resolutionStrings = null;
 
-		@Option(name = "-c", aliases = {"--contrast"}, usage = "comma separated contrast range, e.g. '0,255'")
+		@Option(name = "-c", aliases = {"--contrast"}, usage = "comma separated contrast range, one per dataset or all following the last, e.g. -c '0,255'")
 		final List<String> contrastStrings = null;
 
 		private boolean parsedSuccessfully = false;
