@@ -47,7 +47,8 @@ import net.imglib2.cache.volatiles.CacheHints;
 import net.imglib2.cache.volatiles.LoadingStrategy;
 import net.imglib2.converter.Converters;
 import net.imglib2.type.NativeType;
-import net.imglib2.type.numeric.RealType;
+import net.imglib2.type.numeric.ARGBType;
+import net.imglib2.type.volatiles.AbstractVolatileNativeRealType;
 import net.imglib2.type.volatiles.VolatileDoubleType;
 import net.imglib2.util.Pair;
 import net.imglib2.util.ValuePair;
@@ -186,6 +187,46 @@ public class View {
 		}
 	}
 
+	private static final double[] rs = new double[]{1, 1, 0, 0, 0, 1, 1};
+	private static final double[] gs = new double[]{0, 1, 1, 1, 0, 0, 0};
+	private static final double[] bs = new double[]{0, 0, 0, 1, 1, 1, 0};
+
+	final static private double goldenRatio = 1.0 / (0.5 * Math.sqrt(5) + 0.5);
+
+	private static final double getDouble(final long id) {
+
+		final double x = id * goldenRatio;
+		return x - (long)Math.floor(x);
+	}
+
+	private static final int interpolate(final double[] xs, final int k, final int l, final double u, final double v) {
+
+		return (int)((v * xs[k] + u * xs[l]) * 255.0 + 0.5);
+	}
+
+	private static final int argb(final int r, final int g, final int b, final int alpha) {
+
+		return (((r << 8) | g) << 8) | b | alpha;
+	}
+
+	private static final int argb(final long id) {
+
+		double x = getDouble(id);
+		x *= 6.0;
+		final int k = (int)x;
+		final int l = k + 1;
+		final double u = x - k;
+		final double v = 1.0 - u;
+
+		final int r = interpolate( rs, k, l, u, v );
+		final int g = interpolate( gs, k, l, u, v );
+		final int b = interpolate( bs, k, l, u, v );
+
+		return argb( r, g, b, 0xff );
+	}
+
+
+
 	@SuppressWarnings( "unchecked" )
 	public static final void main(final String... args) throws IOException, InterruptedException, ExecutionException {
 
@@ -198,6 +239,7 @@ public class View {
 		final SharedQueue queue = new SharedQueue(Math.min(8, Math.max(1, numProc / 2)));
 		BdvStackSource<?> bdv = null;
 
+		int id = 0;
 		for (final ReaderInfo entry : options.getReaderInfos()) {
 
 			final N5Reader n5 = entry.n5;
@@ -224,25 +266,35 @@ public class View {
 					n = n5Sources.getA()[0].numDimensions();
 				}
 
+				/* make volatile */
+				final RandomAccessibleInterval<NativeType>[] ras = n5Sources.getA();
+				final RandomAccessibleInterval[] vras = new RandomAccessibleInterval[ras.length];
+				Arrays.setAll(vras, k ->
+					VolatileViews.wrapAsVolatile(
+							n5Sources.getA()[k],
+							queue,
+							new CacheHints(LoadingStrategy.VOLATILE, 0, true)));
+
 				/* remove 1-size dimensions */
+				final double[][] scales = n5Sources.getB();
 				for (int d = 0; d < n;) {
-					final RandomAccessibleInterval<NativeType>[] ras = n5Sources.getA();
-					if (ras[0].dimension(d) == 1)
-						for (int k = 0; k < ras.length; ++k)
-							ras[k] = Views.hyperSlice(ras[k], d, 0);
-					else ++d;
+					if (ras[0].dimension(d) == 1) {
+						--n;
+						for (int k = 0; k < vras.length; ++k) {
+							vras[k] = Views.hyperSlice(vras[k], d, 0);
+							final double[] oldScale = scales[k];
+							scales[k] = Arrays.copyOf(oldScale, n);
+							System.arraycopy(oldScale, d + 1, scales[k], d, scales[k].length - d);
+						}
+					} else ++d;
 				}
-				n = n5Sources.getA()[0].numDimensions();
 
 				final BdvOptions bdvOptions = n == 2 ? Bdv.options().is2D() : Bdv.options();
 
 				final RandomAccessibleInterval<VolatileDoubleType>[] convertedSources = (RandomAccessibleInterval<VolatileDoubleType>[])new RandomAccessibleInterval[n5Sources.getA().length];
-				for (int k = 0; k < n5Sources.getA().length; ++k) {
+				for (int k = 0; k < vras.length; ++k) {
 					convertedSources[k] = Converters.convert(
-							VolatileViews.wrapAsVolatile(
-									(RandomAccessibleInterval<RealType>)(RandomAccessibleInterval)n5Sources.getA()[k],
-									queue,
-									new CacheHints(LoadingStrategy.VOLATILE, 0, true)),
+							(RandomAccessibleInterval<AbstractVolatileNativeRealType<?, ?>>)vras[k],
 							(a, b) -> {
 								b.setValid(a.isValid());
 								if (b.isValid()) {
@@ -270,6 +322,7 @@ public class View {
 						mipmapSource,
 						bdv == null ? bdvOptions : bdvOptions.addTo(bdv));
 				bdv.setDisplayRange(0, 1000);
+				bdv.setColor(new ARGBType(argb(id++)));
 			}
 		}
 	}
