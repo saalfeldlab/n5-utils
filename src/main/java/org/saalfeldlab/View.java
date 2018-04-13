@@ -324,6 +324,9 @@ public class View {
 				bdv.setDisplayRange(0, 1000);
 				bdv.setColor(new ARGBType(argb(id++)));
 			}
+
+			if (id == 1)
+				bdv.setColor(new ARGBType(0xffffffff));
 		}
 	}
 }
