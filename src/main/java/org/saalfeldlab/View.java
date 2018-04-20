@@ -46,6 +46,7 @@ import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.cache.volatiles.CacheHints;
 import net.imglib2.cache.volatiles.LoadingStrategy;
 import net.imglib2.converter.Converters;
+import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.type.NativeType;
 import net.imglib2.type.numeric.ARGBType;
 import net.imglib2.type.volatiles.AbstractVolatileNativeRealType;
@@ -67,21 +68,43 @@ public class View {
 		public final String[] groupNames;
 		public final double[][] resolutions;
 		public final double[][] contrastRanges;
+		public final double[][] offsets;
 
 		public ReaderInfo(
 				final N5Reader n5,
 				final String[] groupNames,
 				final double[][] resolutions,
-				final double[][] contrastRanges) {
+				final double[][] contrastRanges,
+				final double[][] offsets) {
 
 			this.n5 = n5;
 			this.groupNames = groupNames;
 			this.resolutions = resolutions;
 			this.contrastRanges = contrastRanges;
+			this.offsets = offsets;
 		}
 	}
 
 	public static class Options implements Serializable {
+
+		@Option(name = "-i", aliases = {"--container"}, required = true, usage = "container paths, e.g. -i $HOME/fib19.n5 -i /nrs/flyem ...")
+		private final List<String> containerPaths = null;
+
+		@Option(name = "-d", aliases = {"--datasets"}, required = true, usage = "comma separated list of datasets, one list per container, e.g. -d '/slab-26,slab-27' -d '/volumes/raw' ...")
+		final List<String> groupLists = null;
+
+		@Option(name = "-r", aliases = {"--resolution"}, usage = "comma separated list of scale factors, one per dataset or all following the last, e.g. -r '4,4,40'")
+		final List<String> resolutionStrings = null;
+
+		@Option(name = "-c", aliases = {"--contrast"}, usage = "comma separated contrast range, one per dataset or all following the last, e.g. -c '0,255'")
+		final List<String> contrastStrings = null;
+
+		@Option(name = "-o", aliases = {"--offset"}, usage = "comma separated list of offsets (in scaled world coordinates), one per dataset or all following the last, e.g. -o '100.0,200.0,10.0'")
+		final List<String> offsetStrings = null;
+
+		private boolean parsedSuccessfully = false;
+
+		private final ArrayList<ReaderInfo> readerInfos = new ArrayList<>();
 
 		protected static final boolean parseCSDoubleArray(final String csv, final double[] array) {
 
@@ -112,22 +135,6 @@ public class View {
 			return array;
 		}
 
-		@Option(name = "-i", aliases = {"--container"}, required = true, usage = "container paths, e.g. -i $HOME/fib19.n5 -i /nrs/flyem ...")
-		private final List<String> containerPaths = null;
-
-		@Option(name = "-d", aliases = {"--datasets"}, required = true, usage = "comma separated list of datasets, one list per container, e.g. -d '/slab-26,slab-27' -d '/volumes/raw' ...")
-		final List<String> groupLists = null;
-
-		@Option(name = "-r", aliases = {"--resolution"}, usage = "comma separated list of scale factors, one per dataset or all following the last, e.g. -r '4,4,40'")
-		final List<String> resolutionStrings = null;
-
-		@Option(name = "-c", aliases = {"--contrast"}, usage = "comma separated contrast range, one per dataset or all following the last, e.g. -c '0,255'")
-		final List<String> contrastStrings = null;
-
-		private boolean parsedSuccessfully = false;
-
-		private final ArrayList<ReaderInfo> readerInfos = new ArrayList<>();
-
 		public Options(final String[] args) throws NumberFormatException, IOException {
 
 			final CmdLineParser parser = new CmdLineParser(this);
@@ -135,7 +142,8 @@ public class View {
 				parser.parseArgument(args);
 				double[] resolution = new double[]{1, 1, 1};
 				double[] contrast = new double[]{0, 255};
-				for (int i = 0, j = 0, k = 0; i < containerPaths.size(); ++i) {
+				double[] offset = new double[]{0, 0, 0};
+				for (int i = 0, j = 0; i < containerPaths.size(); ++i) {
 					final String containerPath = containerPaths.get(i);
 					final N5Reader n5;
 					if (Files.isRegularFile(Paths.get(containerPath)))
@@ -146,18 +154,21 @@ public class View {
 					final String[] groups = groupLists.get(i).split(",\\s*");
 					final double[][] resolutions = new double[groups.length][];
 					final double[][] contrastRanges = new double[groups.length][];
-					for (int l = 0; l < groups.length; ++l) {
+					final double[][] offsets = new double[groups.length][];
+					for (int k = 0; k < groups.length; ++k, ++j) {
 						if (resolutionStrings != null && j < resolutionStrings.size())
 							resolution = parseCSDoubleArray(resolutionStrings.get(j));
-						if (contrastStrings != null && k < contrastStrings.size())
-							contrast = parseCSDoubleArray(contrastStrings.get(k));
+						if (contrastStrings != null && j < contrastStrings.size())
+							contrast = parseCSDoubleArray(contrastStrings.get(j));
+						if (offsetStrings != null && j < offsetStrings.size())
+							offset = parseCSDoubleArray(offsetStrings.get(j));
 
-						resolutions[l] = resolution.clone();
-						contrastRanges[l] = contrast.clone();
-						++j; ++k;
+						resolutions[k] = resolution.clone();
+						contrastRanges[k] = contrast.clone();
+						offsets[k] = offset.clone();
 					}
 
-					readerInfos.add(new ReaderInfo(n5, groups, resolutions, contrastRanges));
+					readerInfos.add(new ReaderInfo(n5, groups, resolutions, contrastRanges, offsets));
 				}
 				parsedSuccessfully = true;
 			} catch (final CmdLineException e) {
@@ -248,8 +259,9 @@ public class View {
 				final String groupName = entry.groupNames[i];
 				final double[] resolution = entry.resolutions[i];
 				final double[] contrast = entry.contrastRanges[i];
+				final double[] offset = entry.offsets[i];
 
-				System.out.println(n5 + " : " + groupName + ", " + Arrays.toString(resolution) + ", " + Arrays.toString(contrast));
+				System.out.println(n5 + " : " + groupName + ", " + Arrays.toString(resolution) + ", " + Arrays.toString(contrast) + ", " + (offset == null ? "dataset offset" : Arrays.toString(offset)));
 
 				final Pair<RandomAccessibleInterval<NativeType>[], double[][]> n5Sources;
 				int n;
@@ -310,12 +322,18 @@ public class View {
 					Arrays.setAll(scale, j -> scale[j] * resolution[j]);
 				}
 
+				/* offset transform */
+				final AffineTransform3D sourceTransform = new AffineTransform3D();
+				sourceTransform.setTranslation(offset);
+				System.out.println(groupName + " " + sourceTransform.toString());
+
 				final RandomAccessibleIntervalMipmapSource<VolatileDoubleType> mipmapSource =
 						new RandomAccessibleIntervalMipmapSource<VolatileDoubleType>(
 								convertedSources,
 								new VolatileDoubleType(),
 								n5Sources.getB(),
 								new FinalVoxelDimensions("px", resolution),
+								sourceTransform,
 								groupName);
 
 				bdv = BdvFunctions.show(
