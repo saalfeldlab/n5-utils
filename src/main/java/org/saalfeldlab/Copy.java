@@ -18,8 +18,6 @@ package org.saalfeldlab;
 
 import java.io.IOException;
 import java.io.Serializable;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -33,21 +31,19 @@ import org.janelia.saalfeldlab.n5.Compression;
 import org.janelia.saalfeldlab.n5.DatasetAttributes;
 import org.janelia.saalfeldlab.n5.GzipCompression;
 import org.janelia.saalfeldlab.n5.Lz4Compression;
-import org.janelia.saalfeldlab.n5.N5FSReader;
-import org.janelia.saalfeldlab.n5.N5FSWriter;
 import org.janelia.saalfeldlab.n5.N5Reader;
 import org.janelia.saalfeldlab.n5.N5Writer;
 import org.janelia.saalfeldlab.n5.RawCompression;
 import org.janelia.saalfeldlab.n5.XzCompression;
-import org.janelia.saalfeldlab.n5.hdf5.N5HDF5Reader;
-import org.janelia.saalfeldlab.n5.hdf5.N5HDF5Writer;
 import org.janelia.saalfeldlab.n5.imglib2.N5Utils;
 import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
+import org.saalfeldlab.N5Factory.N5BackendType;
+import org.saalfeldlab.N5Factory.N5Options;
 
-import ch.systemsx.cisd.hdf5.HDF5Factory;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.type.NativeType;
+import net.imglib2.util.Pair;
 
 /**
  *
@@ -57,7 +53,9 @@ import net.imglib2.type.NativeType;
 public class Copy {
 
 	protected final N5Reader n5Reader;
+	protected final N5BackendType n5ReaderBackend;
 	protected final N5Writer n5Writer;
+	protected final N5BackendType n5WriterBackend;
 	protected final int[] blockSize;
 	protected final Compression compression;
 	protected final int numProc;
@@ -81,8 +79,8 @@ public class Copy {
 		private String compressionString = "";
 
 		private boolean parsedSuccessfully = false;
-		private N5Reader n5Reader;
-		private N5Writer n5Writer;
+		private Pair<N5Reader, N5BackendType> n5ReaderAndBackend;
+		private Pair<N5Writer, N5BackendType> n5WriterAndBackend;
 		private int[] blockSize;
 		private Compression compression;
 
@@ -106,55 +104,35 @@ public class Copy {
 			try {
 				parser.parseArgument(args);
 
-				final boolean h5Input = Files.isRegularFile(Paths.get(inputContainerPath));
-				final boolean h5Output = outputContainerPath.endsWith(".h5") || outputContainerPath.endsWith(".hdf5") || outputContainerPath.endsWith(".hdf");
-
 				if (blockSizeString != null)
 					blockSize = parseCSIntArray(blockSizeString);
-
-				if (h5Input)
-					n5Reader = new N5HDF5Reader(HDF5Factory.openForReading(inputContainerPath), blockSize);
-				else
-					n5Reader = new N5FSReader(inputContainerPath);
-
-				if (h5Output)
-					n5Writer = new N5HDF5Writer(HDF5Factory.open(outputContainerPath), blockSize);
-				else
-					n5Writer = new N5FSWriter(outputContainerPath);
 
 				if (compressionString == null)
 					compression = null;
 				else {
-					switch (compressionString) {
+					switch (compressionString.toLowerCase()) {
 					case "raw":
-					case "RAW":
-					case "Raw":
 						compression = new RawCompression();
 						break;
 					case "bzip2":
-					case "BZIP2":
-					case "Bzip2":
 						compression = new Bzip2Compression();
 						break;
 					case "lz4":
-					case "LZ4":
-					case "Lz4":
 						compression = new Lz4Compression();
 						break;
 					case "xz":
-					case "XZ":
-					case "Xz":
 						compression = new XzCompression();
 						break;
 					case "gzip":
-					case "GZIP":
-					case "Gzip":
 						compression = new GzipCompression();
 						break;
 					default:
 						compression = null;
 					}
 				}
+
+				n5ReaderAndBackend = N5Factory.createN5Reader(new N5Options(inputContainerPath, blockSize, compression));
+				n5WriterAndBackend = N5Factory.createN5Writer(new N5Options(outputContainerPath, blockSize, compression));
 
 				parsedSuccessfully = true;
 			} catch (final Exception e) {
@@ -165,12 +143,22 @@ public class Copy {
 
 		public N5Reader getReader() {
 
-			return n5Reader;
+			return n5ReaderAndBackend.getA();
+		}
+
+		public N5BackendType getReaderBackend() {
+
+			return n5ReaderAndBackend.getB();
 		}
 
 		public N5Writer getWriter() {
 
-			return n5Writer;
+			return n5WriterAndBackend.getA();
+		}
+
+		public N5BackendType getWriterBackend() {
+
+			return n5WriterAndBackend.getB();
 		}
 
 		public int[] getBlockSize() {
@@ -197,7 +185,9 @@ public class Copy {
 	public Copy(final Options options) {
 
 		n5Reader = options.getReader();
+		n5ReaderBackend = options.getReaderBackend();
 		n5Writer = options.getWriter();
+		n5WriterBackend = options.getWriterBackend();
 		blockSize = options.getBlockSize();
 		compression = options.getCompression();
 		numProc = Runtime.getRuntime().availableProcessors();
@@ -227,17 +217,15 @@ public class Copy {
 		}
 	}
 
-	protected void reorderIfNecessary(
-			final double[] array) {
+	protected void reorderIfNecessary(final double[] array) {
 
-		if (!(n5Reader.getClass().isInstance(n5Writer) || n5Writer.getClass().isInstance(n5Reader)))
+		if ((n5ReaderBackend == N5BackendType.HDF5) != (n5WriterBackend == N5BackendType.HDF5))
 			reorder(array);
 	}
 
-	protected void reorderIfNecessary(
-			final long[] array) {
+	protected void reorderIfNecessary(final long[] array) {
 
-		if (!(n5Reader.getClass().isInstance(n5Writer) || n5Writer.getClass().isInstance(n5Reader)))
+		if ((n5ReaderBackend == N5BackendType.HDF5) != (n5WriterBackend == N5BackendType.HDF5))
 			reorder(array);
 	}
 
@@ -255,14 +243,14 @@ public class Copy {
 			return;
 		}
 
-		if (n5Writer instanceof N5HDF5Writer)
+		if (n5WriterBackend == N5BackendType.HDF5) {
 			N5Utils.save(
 					dataset,
 					n5Writer,
 					datasetName,
 					blockSize == null || blockSize.length != dataset.numDimensions() ? datasetAttributes.getBlockSize() : blockSize,
 					compression == null ? datasetAttributes.getCompression() : compression);
-		else {
+		} else {
 			final ExecutorService exec = Executors.newFixedThreadPool(numProc);
 			N5Utils.save(
 					dataset,
