@@ -133,7 +133,7 @@ public class View {
 				double[] contrast = new double[]{0, 255};
 				for (int i = 0, j = 0, k = 0; i < containerPaths.size(); ++i) {
 					final String containerPath = containerPaths.get(i);
-					final N5Reader n5 = N5Factory.createN5Reader(new N5Options(containerPath, new int[] {64}, null)).getA();
+					final N5Reader n5 = N5Factory.createN5Reader(new N5Options(containerPath, new int[] {64}, null));
 					final String[] groups = groupLists.get(i).split(",\\s*");
 					final double[][] resolutions = new double[groups.length][];
 					final double[][] contrastRanges = new double[groups.length][];

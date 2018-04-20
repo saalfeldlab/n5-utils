@@ -34,8 +34,6 @@ import com.google.cloud.resourcemanager.ResourceManager;
 import com.google.cloud.storage.Storage;
 
 import ch.systemsx.cisd.hdf5.HDF5Factory;
-import net.imglib2.util.Pair;
-import net.imglib2.util.ValuePair;
 
 public class N5Factory {
 
@@ -52,39 +50,31 @@ public class N5Factory {
 		}
 	}
 
-	public static enum N5BackendType {
-
-		Filesystem,
-		HDF5,
-		AmazonS3,
-		GoogleCloud
-	}
-
 	private static enum N5AccessType {
 
 		Reader,
 		Writer
 	}
 
-	public static Pair<N5Reader, N5BackendType> createN5Reader(final N5Options options) throws IOException {
+	public static N5Reader createN5Reader(final N5Options options) throws IOException {
 
 		return createN5(options, N5AccessType.Reader);
 	}
 
-	public static Pair<N5Writer, N5BackendType> createN5Writer(final N5Options options) throws IOException {
+	public static N5Writer createN5Writer(final N5Options options) throws IOException {
 
 		return createN5(options, N5AccessType.Writer);
 	}
 
 	@SuppressWarnings("unchecked")
-	private static <N5 extends N5Reader> Pair<N5, N5BackendType> createN5(final N5Options options, final N5AccessType accessType) throws IOException {
+	private static <N5 extends N5Reader> N5 createN5(final N5Options options, final N5AccessType accessType) throws IOException {
 
 		final URI uri = URI.create(options.containerPath);
 		if (uri.getScheme() == null) {
 			if (isHDF5(options.containerPath, accessType))
-				return new ValuePair<>((N5) createN5HDF5(options.containerPath, options.blockSize, accessType), N5BackendType.HDF5);
+				return (N5) createN5HDF5(options.containerPath, options.blockSize, accessType);
 			else
-				return new ValuePair<>((N5) createN5FS(options.containerPath, accessType), N5BackendType.Filesystem);
+				return (N5) createN5FS(options.containerPath, accessType);
 		}
 
 		if (uri.getScheme().equalsIgnoreCase("http") || uri.getScheme().equalsIgnoreCase("https")) {
@@ -99,7 +89,7 @@ public class N5Factory {
 			if (s3Uri != null) {
 				if (s3Uri.getBucket() == null || s3Uri.getBucket().isEmpty() || (s3Uri.getKey() != null && !s3Uri.getKey().isEmpty()))
 					throw new IllegalArgumentException("N5 datasets on AWS S3 are stored in buckets. Please provide a link to a bucket.");
-				return new ValuePair<>((N5) createN5S3(options.containerPath, accessType), N5BackendType.AmazonS3);
+				return (N5) createN5S3(options.containerPath, accessType);
 			} else {
 				// might be a google cloud link
 				final GoogleCloudStorageURI googleCloudUri;
@@ -111,20 +101,20 @@ public class N5Factory {
 
 				if (googleCloudUri.getBucket() == null || googleCloudUri.getBucket().isEmpty() || (googleCloudUri.getKey() != null && !googleCloudUri.getKey().isEmpty()))
 					throw new IllegalArgumentException("N5 datasets on Google Cloud are stored in buckets. Please provide a link to a bucket.");
-				return new ValuePair<>((N5) createN5GoogleCloud(options.containerPath, accessType), N5BackendType.GoogleCloud);
+				return (N5) createN5GoogleCloud(options.containerPath, accessType);
 			}
 		} else {
 			switch (uri.getScheme().toLowerCase()) {
 			case "file":
 				final String parsedPath = Paths.get(uri).toString();
 				if (isHDF5(parsedPath, accessType))
-					return new ValuePair<>((N5) createN5HDF5(parsedPath, options.blockSize, accessType), N5BackendType.HDF5);
+					return (N5) createN5HDF5(parsedPath, options.blockSize, accessType);
 				else
-					return new ValuePair<>((N5) createN5FS(parsedPath, accessType), N5BackendType.Filesystem);
+					return (N5) createN5FS(parsedPath, accessType);
 			case "s3":
-				return new ValuePair<>((N5) createN5S3(options.containerPath, accessType), N5BackendType.AmazonS3);
+				return (N5) createN5S3(options.containerPath, accessType);
 			case "gs":
-				return new ValuePair<>((N5) createN5GoogleCloud(options.containerPath, accessType), N5BackendType.GoogleCloud);
+				return (N5) createN5GoogleCloud(options.containerPath, accessType);
 			default:
 				throw new IllegalArgumentException("Unsupported protocol: " + uri.getScheme());
 			}

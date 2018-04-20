@@ -35,15 +35,15 @@ import org.janelia.saalfeldlab.n5.N5Reader;
 import org.janelia.saalfeldlab.n5.N5Writer;
 import org.janelia.saalfeldlab.n5.RawCompression;
 import org.janelia.saalfeldlab.n5.XzCompression;
+import org.janelia.saalfeldlab.n5.hdf5.N5HDF5Reader;
+import org.janelia.saalfeldlab.n5.hdf5.N5HDF5Writer;
 import org.janelia.saalfeldlab.n5.imglib2.N5Utils;
 import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
-import org.saalfeldlab.N5Factory.N5BackendType;
 import org.saalfeldlab.N5Factory.N5Options;
 
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.type.NativeType;
-import net.imglib2.util.Pair;
 
 /**
  *
@@ -53,9 +53,7 @@ import net.imglib2.util.Pair;
 public class Copy {
 
 	protected final N5Reader n5Reader;
-	protected final N5BackendType n5ReaderBackend;
 	protected final N5Writer n5Writer;
-	protected final N5BackendType n5WriterBackend;
 	protected final int[] blockSize;
 	protected final Compression compression;
 	protected final int numProc;
@@ -79,8 +77,8 @@ public class Copy {
 		private String compressionString = "";
 
 		private boolean parsedSuccessfully = false;
-		private Pair<N5Reader, N5BackendType> n5ReaderAndBackend;
-		private Pair<N5Writer, N5BackendType> n5WriterAndBackend;
+		private N5Reader n5Reader;
+		private N5Writer n5Writer;
 		private int[] blockSize;
 		private Compression compression;
 
@@ -131,8 +129,8 @@ public class Copy {
 					}
 				}
 
-				n5ReaderAndBackend = N5Factory.createN5Reader(new N5Options(inputContainerPath, blockSize, compression));
-				n5WriterAndBackend = N5Factory.createN5Writer(new N5Options(outputContainerPath, blockSize, compression));
+				n5Reader = N5Factory.createN5Reader(new N5Options(inputContainerPath, blockSize, compression));
+				n5Writer = N5Factory.createN5Writer(new N5Options(outputContainerPath, blockSize, compression));
 
 				parsedSuccessfully = true;
 			} catch (final Exception e) {
@@ -143,22 +141,12 @@ public class Copy {
 
 		public N5Reader getReader() {
 
-			return n5ReaderAndBackend.getA();
-		}
-
-		public N5BackendType getReaderBackend() {
-
-			return n5ReaderAndBackend.getB();
+			return n5Reader;
 		}
 
 		public N5Writer getWriter() {
 
-			return n5WriterAndBackend.getA();
-		}
-
-		public N5BackendType getWriterBackend() {
-
-			return n5WriterAndBackend.getB();
+			return n5Writer;
 		}
 
 		public int[] getBlockSize() {
@@ -185,9 +173,7 @@ public class Copy {
 	public Copy(final Options options) {
 
 		n5Reader = options.getReader();
-		n5ReaderBackend = options.getReaderBackend();
 		n5Writer = options.getWriter();
-		n5WriterBackend = options.getWriterBackend();
 		blockSize = options.getBlockSize();
 		compression = options.getCompression();
 		numProc = Runtime.getRuntime().availableProcessors();
@@ -219,13 +205,13 @@ public class Copy {
 
 	protected void reorderIfNecessary(final double[] array) {
 
-		if ((n5ReaderBackend == N5BackendType.HDF5) != (n5WriterBackend == N5BackendType.HDF5))
+		if ((n5Reader instanceof N5HDF5Reader) != (n5Writer instanceof N5HDF5Writer))
 			reorder(array);
 	}
 
 	protected void reorderIfNecessary(final long[] array) {
 
-		if ((n5ReaderBackend == N5BackendType.HDF5) != (n5WriterBackend == N5BackendType.HDF5))
+		if ((n5Reader instanceof N5HDF5Reader) != (n5Writer instanceof N5HDF5Writer))
 			reorder(array);
 	}
 
@@ -243,7 +229,7 @@ public class Copy {
 			return;
 		}
 
-		if (n5WriterBackend == N5BackendType.HDF5) {
+		if (n5Writer instanceof N5HDF5Writer) {
 			N5Utils.save(
 					dataset,
 					n5Writer,
