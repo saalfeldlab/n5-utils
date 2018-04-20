@@ -18,20 +18,17 @@ package org.saalfeldlab;
 
 import java.io.IOException;
 import java.io.Serializable;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 
-import org.janelia.saalfeldlab.n5.N5FSReader;
 import org.janelia.saalfeldlab.n5.N5Reader;
-import org.janelia.saalfeldlab.n5.hdf5.N5HDF5Reader;
 import org.janelia.saalfeldlab.n5.imglib2.N5Utils;
 import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
+import org.saalfeldlab.N5Factory.N5Options;
 
 import bdv.util.Bdv;
 import bdv.util.BdvFunctions;
@@ -40,7 +37,6 @@ import bdv.util.BdvStackSource;
 import bdv.util.RandomAccessibleIntervalMipmapSource;
 import bdv.util.volatiles.SharedQueue;
 import bdv.util.volatiles.VolatileViews;
-import ch.systemsx.cisd.hdf5.HDF5Factory;
 import mpicbg.spim.data.sequence.FinalVoxelDimensions;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.cache.volatiles.CacheHints;
@@ -145,12 +141,7 @@ public class View {
 				double[] offset = new double[]{0, 0, 0};
 				for (int i = 0, j = 0; i < containerPaths.size(); ++i) {
 					final String containerPath = containerPaths.get(i);
-					final N5Reader n5;
-					if (Files.isRegularFile(Paths.get(containerPath)))
-						n5 = new N5HDF5Reader(HDF5Factory.openForReading(containerPath), 64);
-					else
-						n5 = new N5FSReader(containerPath);
-
+					final N5Reader n5 = N5Factory.createN5Reader(new N5Options(containerPath, new int[] {64}, null));
 					final String[] groups = groupLists.get(i).split(",\\s*");
 					final double[][] resolutions = new double[groups.length][];
 					final double[][] contrastRanges = new double[groups.length][];
@@ -271,7 +262,7 @@ public class View {
 					n = source.numDimensions();
 					final double[] scale = new double[n];
 					Arrays.fill(scale, 1);
-					n5Sources = new ValuePair<RandomAccessibleInterval<NativeType>[], double[][]>(new RandomAccessibleInterval[] {source}, new double[][]{scale});
+					n5Sources = new ValuePair<>(new RandomAccessibleInterval[] {source}, new double[][]{scale});
 				}
 				else {
 					n5Sources = N5Utils.openMipmaps(n5, groupName, true);
@@ -303,7 +294,7 @@ public class View {
 
 				final BdvOptions bdvOptions = n == 2 ? Bdv.options().is2D() : Bdv.options();
 
-				final RandomAccessibleInterval<VolatileDoubleType>[] convertedSources = (RandomAccessibleInterval<VolatileDoubleType>[])new RandomAccessibleInterval[n5Sources.getA().length];
+				final RandomAccessibleInterval<VolatileDoubleType>[] convertedSources = new RandomAccessibleInterval[n5Sources.getA().length];
 				for (int k = 0; k < vras.length; ++k) {
 					convertedSources[k] = Converters.convert(
 							(RandomAccessibleInterval<AbstractVolatileNativeRealType<?, ?>>)vras[k],
@@ -328,7 +319,7 @@ public class View {
 				System.out.println(groupName + " " + sourceTransform.toString());
 
 				final RandomAccessibleIntervalMipmapSource<VolatileDoubleType> mipmapSource =
-						new RandomAccessibleIntervalMipmapSource<VolatileDoubleType>(
+						new RandomAccessibleIntervalMipmapSource<>(
 								convertedSources,
 								new VolatileDoubleType(),
 								n5Sources.getB(),
