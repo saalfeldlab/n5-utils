@@ -51,5 +51,4 @@ rm cp.txt
 mkdir -p $INSTALL_DIR
 mv n5-view $INSTALL_DIR/
 mv n5-copy $INSTALL_DIR/
-mv n5-copy-cremi $INSTALL_DIR/
 
