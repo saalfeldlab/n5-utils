@@ -15,7 +15,7 @@ Install into your favorite local binary `$PATH`:
 ```
 All dependencies will be downloaded and managed by maven automatically.
 
-This installs three tools, `n5-view`, `n5-copy`, and `n5-copy-cremi`.
+This installs two tools, `n5-view` and `n5-copy`.
 
 Run the viewer
 ```bash
@@ -40,7 +40,7 @@ n5-copy \
 ```
 or for one or more groups/ datasets:
 ```bash
-c5-copy \
+n5-copy \
   -i '/path/file.hdf5' \
   -o '/path/file.n5' \
   -b 256,256,26
@@ -48,4 +48,3 @@ c5-copy \
   -d /volumes
 ```
 
-Replace `n5-copy` with `n5-copy-cremi` if your data is a CREMI file and you want the `offset` and `resolution` attributes ordered like the rest of the API (row major in HDF5 and column major in N5).
