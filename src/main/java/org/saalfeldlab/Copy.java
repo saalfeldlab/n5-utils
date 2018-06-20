@@ -73,7 +73,7 @@ public class Copy {
 		@Option(name = "-b", aliases = { "--blockSize" }, usage = "override blockSize of input datasets, e.g. 256,256,26")
 		private String blockSizeString = null;
 
-		@Option(name = "-c", aliases = { "--compression" }, usage = "override compression type of input datasets, e.g. gzip")
+		@Option(name = "-c", aliases = { "--compression" }, usage = "override compression type of input N5 datasets, e.g. gzip (HDF5 inputs are copied without compression by default, in this case this option sets the output compression)")
 		private String compressionString = "";
 
 		private boolean parsedSuccessfully = false;
