@@ -1,0 +1,62 @@
+import bdv.util.*;
+
+import ij.*;
+
+import java.util.concurrent.*;
+
+import org.janelia.saalfeldlab.n5.*;
+import org.janeliai.saalfeldlab.n5.imglib2.*;
+import org.janelia.saalfeldlab.n5.imglib2.*;
+import org.janelia.saalfeldlab.n5.hdf5.*;
+import org.janelia.saalfeldlab.n5.googlecloud.*;
+
+import net.imglib2.img.display.imagej.*;
+import net.imglib2.img.imageplus.*;
+import net.imglib2.realtransform.*;
+import net.imglib2.util.*;
+import net.imglib2.view.*;
+
+n5 = new N5FSReader("/media/saalfeld/saalfelds-ssd1/lauritzen-02.n5");
+
+img = N5Utils.open(n5, "/volumes/raw-small-blocks/s3");
+
+ImageJFunctions.show(img, "img");
+bdv = BdvFunctions.show(img, "img");
+options = BdvOptions.options().addTo(bdv);
+
+crop = Views.interval(img, new long[]{100, 200, 300}, new long[]{500, 500, 400});
+
+ImageJFunctions.show(crop, "crop");
+BdvFunctions.show(crop, "crop", options);
+
+extended = Views.extendRandom(crop, 0, 255);
+
+BdvFunctions.show(extended, crop, "extended", options);
+
+n5Writer = new N5FSWriter("/media/saalfeld/saalfelds-ssd1/test.n5");
+
+exec = Executors.newFixedThreadPool(4);
+
+N5Utils.save(img, n5Writer, "/img", new int[]{64,64,64}, new GzipCompression(6), exec);
+N5Utils.save(crop, n5Writer, "/views/crop", new int[]{64,64,64}, new GzipCompression(6), exec);
+N5Utils.save(Views.interval(extended, img), n5Writer, "/views/extended-crop", new int[]{64,64,64}, new GzipCompression(6), exec);
+
+n5Writer.setAttribute("/views", "meta-bla-1", new double[]{1,2,3});
+n5Writer.setAttribute("/views/crop", "offset", Intervals.minAsLongArray(crop));
+
+img2 = N5Utils.open(n5Writer, "/img");
+
+BdvFunctions.show(img2, "img2", options);
+
+crop2 = N5Utils.open(n5Writer, "/views/crop");
+offset = n5Writer.getAttribute("/views/crop", "offset", double[].class);
+affine = new AffineTransform3D();
+affine.set(
+	1, 0, 0, offset[0],
+	0, 1, 0, offset[1],
+	0, 0, 1, offset[2]);
+BdvFunctions.show(crop2, "crop2", options.sourceTransform(affine));
+
+
+
+
