@@ -144,6 +144,7 @@ import mpicbg.spim.data.sequence.FinalVoxelDimensions;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.cache.volatiles.CacheHints;
 import net.imglib2.cache.volatiles.LoadingStrategy;
+import net.imglib2.converter.Converter;
 import net.imglib2.converter.Converters;
 import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.type.NativeType;
@@ -234,6 +235,24 @@ public class View {
 			return array;
 		}
 
+		protected static final double[] parseContrastRange(final String csv) {
+
+			if (csv.equalsIgnoreCase("labels"))
+				return null;
+			else {
+				final String[] stringValues = csv.split(",\\s*");
+				final double[] array = new double[stringValues.length];
+				try {
+					for (int i = 0; i < array.length; ++i)
+						array[i] = Double.parseDouble(stringValues[i]);
+				} catch (final NumberFormatException e) {
+					e.printStackTrace(System.err);
+					return null;
+				}
+				return array;
+			}
+		}
+
 		public Options(final String[] args) throws NumberFormatException, IOException {
 
 			final CmdLineParser parser = new CmdLineParser(this);
@@ -253,12 +272,12 @@ public class View {
 						if (resolutionStrings != null && j < resolutionStrings.size())
 							resolution = parseCSDoubleArray(resolutionStrings.get(j));
 						if (contrastStrings != null && j < contrastStrings.size())
-							contrast = parseCSDoubleArray(contrastStrings.get(j));
+							contrast = parseContrastRange(contrastStrings.get(j));
 						if (offsetStrings != null && j < offsetStrings.size())
 							offset = parseCSDoubleArray(offsetStrings.get(j));
 
 						resolutions[k] = resolution.clone();
-						contrastRanges[k] = contrast.clone();
+						contrastRanges[k] = contrast == null ? null : contrast.clone();
 						offsets[k] = offset.clone();
 					}
 
@@ -353,9 +372,10 @@ public class View {
 				final String groupName = entry.groupNames[i];
 				final double[] resolution = entry.resolutions[i];
 				final double[] contrast = entry.contrastRanges[i];
+				final boolean isLabel = contrast == null;
 				final double[] offset = entry.offsets[i];
 
-				System.out.println(n5 + " : " + groupName + ", " + Arrays.toString(resolution) + ", " + Arrays.toString(contrast) + ", " + (offset == null ? "dataset offset" : Arrays.toString(offset)));
+				System.out.println(n5 + " : " + groupName + ", " + Arrays.toString(resolution) + ", " + (isLabel ? " labels " : Arrays.toString(contrast)) + ", " + (offset == null ? "dataset offset" : Arrays.toString(offset)));
 
 				final Pair<RandomAccessibleInterval<NativeType>[], double[][]> n5Sources;
 				int n;
@@ -399,18 +419,35 @@ public class View {
 
 				final RandomAccessibleInterval<VolatileDoubleType>[] convertedSources = new RandomAccessibleInterval[n5Sources.getA().length];
 				for (int k = 0; k < vras.length; ++k) {
+					final Converter<AbstractVolatileNativeRealType<?, ?>, VolatileDoubleType> converter;
+					if (isLabel)
+						converter = (a, b) -> {
+							b.setValid(a.isValid());
+							if (b.isValid()) {
+								Integer.hashCode(1);
+								int x = Double.hashCode(a.get().getRealDouble());
+								// hash code from https://stackoverflow.com/questions/664014/what-integer-hash-function-are-good-that-accepts-an-integer-hash-key
+								x = ((x >>> 16) ^ x) * 0x45d9f3b;
+								x = ((x >>> 16) ^ x) * 0x45d9f3b;
+								x = (x >>> 16) ^ x;
+								final double v = ((double)x / Integer.MAX_VALUE + 1) * 500.0;
+								b.setReal(v);
+							}
+						};
+					else
+						converter = (a, b) -> {
+							b.setValid(a.isValid());
+							if (b.isValid()) {
+								double v = a.get().getRealDouble();
+								v -= contrast[0];
+								v /= contrast[1] - contrast[0];
+								v *= 1000;
+								b.setReal(v);
+							}
+						};
 					convertedSources[k] = Converters.convert(
 							(RandomAccessibleInterval<AbstractVolatileNativeRealType<?, ?>>)vras[k],
-							(a, b) -> {
-								b.setValid(a.isValid());
-								if (b.isValid()) {
-									double v = a.get().getRealDouble();
-									v -= contrast[0];
-									v /= contrast[1] - contrast[0];
-									v *= 1000;
-									b.setReal(v);
-								}
-							},
+							converter,
 							new VolatileDoubleType());
 					final double[] scale = n5Sources.getB()[k];
 					Arrays.setAll(scale, j -> scale[j] * resolution[j]);
