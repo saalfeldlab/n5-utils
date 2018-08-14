@@ -420,12 +420,12 @@ public class View {
 				final RandomAccessibleInterval<VolatileDoubleType>[] convertedSources = new RandomAccessibleInterval[n5Sources.getA().length];
 				for (int k = 0; k < vras.length; ++k) {
 					final Converter<AbstractVolatileNativeRealType<?, ?>, VolatileDoubleType> converter;
-					if (isLabel)
+					if (isLabel) {
+						final int idHash = hash(id);
 						converter = (a, b) -> {
 							b.setValid(a.isValid());
 							if (b.isValid()) {
-								Integer.hashCode(1);
-								int x = Double.hashCode(a.get().getRealDouble());
+								int x = Double.hashCode(a.get().getRealDouble()) ^ idHash;
 								// hash code from https://stackoverflow.com/questions/664014/what-integer-hash-function-are-good-that-accepts-an-integer-hash-key
 								x = ((x >>> 16) ^ x) * 0x45d9f3b;
 								x = ((x >>> 16) ^ x) * 0x45d9f3b;
@@ -434,6 +434,7 @@ public class View {
 								b.setReal(v);
 							}
 						};
+					}
 					else
 						converter = (a, b) -> {
 							b.setValid(a.isValid());
@@ -477,5 +478,13 @@ public class View {
 			if (id == 1)
 				bdv.setColor(new ARGBType(0xffffffff));
 		}
+	}
+
+	// hash code from https://stackoverflow.com/questions/664014/what-integer-hash-function-are-good-that-accepts-an-integer-hash-key
+	private static final int hash(final int id) {
+		int x = ((id >>> 16) ^ id) * 0x45d9f3b;
+		x = ((x >>> 16) ^ x) * 0x45d9f3b;
+		x = (x >>> 16) ^ x;
+		return x;
 	}
 }
