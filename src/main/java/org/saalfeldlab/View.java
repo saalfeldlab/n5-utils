@@ -202,17 +202,19 @@ public class View {
 		@Option(name = "-o", aliases = {"--offset"}, usage = "comma separated list of offsets (in scaled world coordinates), one per dataset or all following the last, e.g. -o '100.0,200.0,10.0'")
 		final List<String> offsetStrings = null;
 
+		@Option(name = "-a", aliases = {"--axes"}, usage = "comma separated list of axes to be displayed as XY[Z[T]], one per dataset or all following the last, e.g. -a '0,2,1'")
+		final List<String> axesStrings = null;
+
 		private boolean parsedSuccessfully = false;
 
 		private final ArrayList<ReaderInfo> readerInfos = new ArrayList<>();
 
-		protected static final boolean parseCSDoubleArray(final String csv, final double[] array) {
+		private static final boolean parseCSDoubleArray(final String csv, final double[] array) {
 
 			final String[] stringValues = csv.split(",\\s*");
-			if (stringValues.length != array.length)
-				return false;
 			try {
-				for (int i = 0; i < array.length; ++i)
+				final int n = Math.min(array.length, stringValues.length);
+				for (int i = 0; i < n; ++i)
 					array[i] = Double.parseDouble(stringValues[i]);
 			} catch (final NumberFormatException e) {
 				e.printStackTrace(System.err);
@@ -221,34 +223,27 @@ public class View {
 			return true;
 		}
 
-		protected static final double[] parseCSDoubleArray(final String csv) {
+		private static final boolean parseCSIntArray(final String csv, final int[] array) {
 
 			final String[] stringValues = csv.split(",\\s*");
-			final double[] array = new double[stringValues.length];
 			try {
-				for (int i = 0; i < array.length; ++i)
-					array[i] = Double.parseDouble(stringValues[i]);
+				final int n = Math.min(array.length, stringValues.length);
+				for (int i = 0; i < n; ++i)
+					array[i] = Integer.parseInt(stringValues[i]);
 			} catch (final NumberFormatException e) {
 				e.printStackTrace(System.err);
-				return null;
+				return false;
 			}
-			return array;
+			return true;
 		}
 
-		protected static final double[] parseContrastRange(final String csv) {
+		private static final double[] parseContrastRange(final String csv) {
 
-			if (csv.equalsIgnoreCase("labels"))
+			if (csv.toLowerCase().startsWith("label"))
 				return null;
 			else {
-				final String[] stringValues = csv.split(",\\s*");
-				final double[] array = new double[stringValues.length];
-				try {
-					for (int i = 0; i < array.length; ++i)
-						array[i] = Double.parseDouble(stringValues[i]);
-				} catch (final NumberFormatException e) {
-					e.printStackTrace(System.err);
-					return null;
-				}
+				final double[] array = new double[]{0, 255};
+				parseCSDoubleArray(csv, array);
 				return array;
 			}
 		}
@@ -258,9 +253,10 @@ public class View {
 			final CmdLineParser parser = new CmdLineParser(this);
 			try {
 				parser.parseArgument(args);
-				double[] resolution = new double[]{1, 1, 1};
+				double[] resolution = new double[]{1, 1, 1, 1};
 				double[] contrast = new double[]{0, 255};
-				double[] offset = new double[]{0, 0, 0};
+				double[] offset = new double[]{0, 0, 0, 0};
+				int[] axes = new int[]{0, 1, 2, 3};
 				for (int i = 0, j = 0; i < containerPaths.size(); ++i) {
 					final String containerPath = containerPaths.get(i);
 					final N5Reader n5 = N5Factory.createN5Reader(new N5Options(containerPath, new int[] {64}, null));
@@ -268,17 +264,34 @@ public class View {
 					final double[][] resolutions = new double[groups.length][];
 					final double[][] contrastRanges = new double[groups.length][];
 					final double[][] offsets = new double[groups.length][];
+					final int[][] axess = new int[groups.length][];
 					for (int k = 0; k < groups.length; ++k, ++j) {
-						if (resolutionStrings != null && j < resolutionStrings.size())
-							resolution = parseCSDoubleArray(resolutionStrings.get(j));
 						if (contrastStrings != null && j < contrastStrings.size())
 							contrast = parseContrastRange(contrastStrings.get(j));
+						int n = n5.getAttribute(groups[k], "dimensions", long[].class).length;
+						final double[] nextResolution = new double[n];
+						Arrays.fill(nextResolution, 1);
+						System.arraycopy(resolution, 0, nextResolution, 0, Math.min(resolution.length, n));
+						resolution = nextResolution;
+						if (resolutionStrings != null && j < resolutionStrings.size())
+							parseCSDoubleArray(resolutionStrings.get(j), resolution);
+						final double[] nextOffset = new double[n];
+						Arrays.fill(nextOffset, 0);
+						System.arraycopy(offset, 0, nextOffset, 0, Math.min(offset.length, n));
+						offset = nextOffset;
 						if (offsetStrings != null && j < offsetStrings.size())
-							offset = parseCSDoubleArray(offsetStrings.get(j));
+							parseCSDoubleArray(offsetStrings.get(j), offset);
+						final int[] nextAxes = new int[n];
+						Arrays.setAll(nextAxes, a -> a);
+						System.arraycopy(axes, 0, nextAxes, 0, Math.min(axes.length, n));
+						axes = nextAxes;
+						if (axesStrings != null && j < axesStrings.size())
+							parseCSIntArray(axesStrings.get(j), axes);
 
 						resolutions[k] = resolution.clone();
 						contrastRanges[k] = contrast == null ? null : contrast.clone();
 						offsets[k] = offset.clone();
+						axess[k] = axes.clone();
 					}
 
 					readerInfos.add(new ReaderInfo(n5, groups, resolutions, contrastRanges, offsets));
