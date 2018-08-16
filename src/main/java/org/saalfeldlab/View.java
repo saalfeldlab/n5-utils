@@ -141,18 +141,22 @@ import bdv.util.RandomAccessibleIntervalMipmapSource;
 import bdv.util.volatiles.SharedQueue;
 import bdv.util.volatiles.VolatileViews;
 import mpicbg.spim.data.sequence.FinalVoxelDimensions;
+import net.imglib2.RandomAccessible;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.cache.volatiles.CacheHints;
 import net.imglib2.cache.volatiles.LoadingStrategy;
 import net.imglib2.converter.Converter;
 import net.imglib2.converter.Converters;
 import net.imglib2.realtransform.AffineTransform3D;
+import net.imglib2.transform.integer.MixedTransform;
 import net.imglib2.type.NativeType;
 import net.imglib2.type.numeric.ARGBType;
 import net.imglib2.type.volatiles.AbstractVolatileNativeRealType;
 import net.imglib2.type.volatiles.VolatileDoubleType;
 import net.imglib2.util.Pair;
 import net.imglib2.util.ValuePair;
+import net.imglib2.view.IntervalView;
+import net.imglib2.view.MixedTransformView;
 import net.imglib2.view.Views;
 
 /**
@@ -495,5 +499,52 @@ public class View {
 		x = ((x >>> 16) ^ x) * 0x45d9f3b;
 		x = (x >>> 16) ^ x;
 		return x;
+	}
+
+	/**
+	 * Create a view with permuted axes as specified.
+	 *
+	 * TODO remove when available in ImgLib2
+	 *
+	 * <p>
+	 * <em>Note, that it is not allowed to set the {@code axes} array such that
+	 * a source component is mapped to several target components!</em>
+	 * </p>
+	 */
+	private static final <T> MixedTransformView<T> permuteAll(final RandomAccessible<T> randomAccessible, final int... axes) {
+
+		final int n = randomAccessible.numDimensions();
+
+		assert n == axes.length : "The number of source dimensions must match the number of axes.";
+
+		final MixedTransform t = new MixedTransform(n, n);
+		t.setComponentMapping(axes);
+		return new MixedTransformView<T>(randomAccessible, t);
+	}
+
+	/**
+	 * Create a view with permuted axes as specified.
+	 *
+	 * TODO remove when available in ImgLib2
+	 *
+	 * <p>
+	 * <em>Note, that it is not allowed to set the {@code axes} array such that
+	 * a source component is mapped to several target components!</em>
+	 * </p>
+	 */
+	private static final <T> IntervalView<T> permuteAll(final RandomAccessibleInterval<T> interval, final int... axes) {
+
+		final int n = interval.numDimensions();
+
+		assert n == axes.length : "The number of source dimensions must match the number of axes.";
+
+		final long[] min = new long[n];
+		final long[] max = new long[n];
+		for (int d = 0; d < n; ++d) {
+			min[d] = interval.min(axes[d]);
+			max[d] = interval.max(axes[d]);
+		}
+
+		return Views.interval(permuteAll((RandomAccessible<T>)interval, axes), min, max);
 	}
 }
