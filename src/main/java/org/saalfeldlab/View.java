@@ -624,6 +624,8 @@ public class View {
 			offset = n5.getAttribute(group, "offset", double[].class);
 			if (offset == null)
 				offset = n5.getAttribute(group + "/s0", "offset", double[].class);
+			if (offset != null)
+				offset = Arrays.copyOf(offset, datasetN(n5, group));
 		} catch (final IOException e) {
 			offset = null;
 		}
