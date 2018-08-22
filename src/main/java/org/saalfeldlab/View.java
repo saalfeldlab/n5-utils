@@ -309,13 +309,17 @@ public class View {
 						offset = nextOffset;
 						if (offsetStrings != null && j < offsetStrings.size())
 							parseCSDoubleArray(offsetStrings.get(j), offset);
-						int[] nextAxes = null;
-						if (axesStrings != null && j < axesStrings.size())
-							nextAxes = parseCSIntArray(axesStrings.get(j));
-						if (nextAxes == null) {
+						int[] nextAxes;
+						if (axesStrings == null) {
 							nextAxes = new int[n];
 							Arrays.setAll(nextAxes, a -> a);
-							System.arraycopy(axes, 0, nextAxes, 0, Math.min(axes.length, n));
+						} else {
+							nextAxes = null;
+							if (j < axesStrings.size())
+								nextAxes = parseCSIntArray(axesStrings.get(j));
+							if (nextAxes == null) {
+								nextAxes = axes;
+							}
 						}
 						axes = nextAxes;
 						if (axes.length > maxN) maxN = axes.length;
