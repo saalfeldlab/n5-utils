@@ -48,3 +48,10 @@ n5-copy \
   -d /volumes
 ```
 
+# Use as a library in Fiji
+
+This project can be used to deploy the most useful n5 libraries into an existing Fiji installation where they can be used for scripting.  Thanks to the [scijava-maven-plugin](https://github.com/scijava/scijava-maven-plugin), you can do this by simply passing your Fiji installation path to maven
+```
+mvn -Dimagej.app.directory=$HOME/packages/Fiji.app
+```
+Then try the experiments in this [script](https://github.com/saalfeldlab/n5-utils/blob/master/scripts/n5-examples.bsh) with your own data.
