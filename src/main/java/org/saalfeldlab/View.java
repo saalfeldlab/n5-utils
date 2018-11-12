@@ -133,6 +133,7 @@ import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
 import org.saalfeldlab.N5Factory.N5Options;
 
+import bdv.util.AxisOrder;
 import bdv.util.Bdv;
 import bdv.util.BdvFunctions;
 import bdv.util.BdvOptions;
@@ -173,19 +174,22 @@ public class View {
 		public final double[][] resolutions;
 		public final double[][] contrastRanges;
 		public final double[][] offsets;
+		public final int[][] axess;
 
 		public ReaderInfo(
 				final N5Reader n5,
 				final String[] groupNames,
 				final double[][] resolutions,
 				final double[][] contrastRanges,
-				final double[][] offsets) {
+				final double[][] offsets,
+				final int[][] axess) {
 
 			this.n5 = n5;
 			this.groupNames = groupNames;
 			this.resolutions = resolutions;
 			this.contrastRanges = contrastRanges;
 			this.offsets = offsets;
+			this.axess = axess;
 		}
 	}
 
@@ -210,6 +214,8 @@ public class View {
 		final List<String> axesStrings = null;
 
 		private boolean parsedSuccessfully = false;
+
+		private int maxN = 2;
 
 		private final ArrayList<ReaderInfo> readerInfos = new ArrayList<>();
 
@@ -241,6 +247,20 @@ public class View {
 			return true;
 		}
 
+		private static final int[] parseCSIntArray(final String csv) {
+
+			try {
+				final String[] stringValues = csv.split(",\\s*");
+				final int[] array = new int[stringValues.length];
+				for (int i = 0; i < array.length; ++i)
+					array[i] = Integer.parseInt(stringValues[i]);
+				return array;
+			} catch (final Exception e) {
+				e.printStackTrace(System.err);
+				return null;
+			}
+		}
+
 		private static final double[] parseContrastRange(final String csv) {
 
 			if (csv.toLowerCase().startsWith("label"))
@@ -257,6 +277,7 @@ public class View {
 			final CmdLineParser parser = new CmdLineParser(this);
 			try {
 				parser.parseArgument(args);
+				maxN = 2;
 				double[] resolution = new double[]{1, 1, 1, 1};
 				double[] contrast = new double[]{0, 255};
 				double[] offset = new double[]{0, 0, 0, 0};
@@ -272,25 +293,36 @@ public class View {
 					for (int k = 0; k < groups.length; ++k, ++j) {
 						if (contrastStrings != null && j < contrastStrings.size())
 							contrast = parseContrastRange(contrastStrings.get(j));
-						int n = n5.getAttribute(groups[k], "dimensions", long[].class).length;
+						final int n = datasetN(n5, groups[k]);
 						final double[] nextResolution = new double[n];
 						Arrays.fill(nextResolution, 1);
 						System.arraycopy(resolution, 0, nextResolution, 0, Math.min(resolution.length, n));
 						resolution = nextResolution;
 						if (resolutionStrings != null && j < resolutionStrings.size())
 							parseCSDoubleArray(resolutionStrings.get(j), resolution);
-						final double[] nextOffset = new double[n];
-						Arrays.fill(nextOffset, 0);
-						System.arraycopy(offset, 0, nextOffset, 0, Math.min(offset.length, n));
+						double[] nextOffset = datasetOffset(n5, groups[k]);
+						if (nextOffset == null) {
+							nextOffset = new double[n];
+							Arrays.fill(nextOffset, 0);
+							System.arraycopy(offset, 0, nextOffset, 0, Math.min(offset.length, n));
+						}
 						offset = nextOffset;
 						if (offsetStrings != null && j < offsetStrings.size())
 							parseCSDoubleArray(offsetStrings.get(j), offset);
-						final int[] nextAxes = new int[n];
-						Arrays.setAll(nextAxes, a -> a);
-						System.arraycopy(axes, 0, nextAxes, 0, Math.min(axes.length, n));
+						int[] nextAxes;
+						if (axesStrings == null) {
+							nextAxes = new int[n];
+							Arrays.setAll(nextAxes, a -> a);
+						} else {
+							nextAxes = null;
+							if (j < axesStrings.size())
+								nextAxes = parseCSIntArray(axesStrings.get(j));
+							if (nextAxes == null) {
+								nextAxes = axes;
+							}
+						}
 						axes = nextAxes;
-						if (axesStrings != null && j < axesStrings.size())
-							parseCSIntArray(axesStrings.get(j), axes);
+						if (axes.length > maxN) maxN = axes.length;
 
 						resolutions[k] = resolution.clone();
 						contrastRanges[k] = contrast == null ? null : contrast.clone();
@@ -298,7 +330,7 @@ public class View {
 						axess[k] = axes.clone();
 					}
 
-					readerInfos.add(new ReaderInfo(n5, groups, resolutions, contrastRanges, offsets));
+					readerInfos.add(new ReaderInfo(n5, groups, resolutions, contrastRanges, offsets, axess));
 				}
 				parsedSuccessfully = true;
 			} catch (final CmdLineException e) {
@@ -320,10 +352,16 @@ public class View {
 			return readerInfos;
 		}
 
+		public int getMaxN() {
+
+			return maxN;
+		}
+
 		/**
 		 * @param parsedSuccessfully the parsedSuccessfully to set
 		 */
 		public void setParsedSuccessfully(final boolean parsedSuccessfully) {
+
 			this.parsedSuccessfully = parsedSuccessfully;
 		}
 	}
@@ -379,6 +417,8 @@ public class View {
 		final int numProc = Runtime.getRuntime().availableProcessors();
 		final SharedQueue queue = new SharedQueue(Math.min(8, Math.max(1, numProc / 2)));
 		BdvStackSource<?> bdv = null;
+		final int maxN = options.getMaxN();
+		final BdvOptions bdvOptions = maxN == 2 ? Bdv.options().is2D() : maxN == 4 ? BdvOptions.options().axisOrder(AxisOrder.XYZT) : Bdv.options();
 
 		int id = 0;
 		for (final ReaderInfo entry : options.getReaderInfos()) {
@@ -391,8 +431,9 @@ public class View {
 				final double[] contrast = entry.contrastRanges[i];
 				final boolean isLabel = contrast == null;
 				final double[] offset = entry.offsets[i];
+				final int[] axes = entry.axess[i];
 
-				System.out.println(n5 + " : " + groupName + ", " + Arrays.toString(resolution) + ", " + (isLabel ? " labels " : Arrays.toString(contrast)) + ", " + (offset == null ? "dataset offset" : Arrays.toString(offset)));
+				System.out.println(n5 + " : " + groupName + ", " + Arrays.toString(resolution) + ", " + (isLabel ? " labels " : Arrays.toString(contrast)) + ", " + Arrays.toString(offset));
 
 				final Pair<RandomAccessibleInterval<NativeType>[], double[][]> n5Sources;
 				int n;
@@ -418,21 +459,26 @@ public class View {
 							queue,
 							new CacheHints(LoadingStrategy.VOLATILE, 0, true)));
 
-				/* remove 1-size dimensions */
-				final double[][] scales = n5Sources.getB();
-				for (int d = 0; d < n;) {
-					if (ras[0].dimension(d) == 1) {
-						--n;
-						for (int k = 0; k < vras.length; ++k) {
-							vras[k] = Views.hyperSlice(vras[k], d, 0);
-							final double[] oldScale = scales[k];
-							scales[k] = Arrays.copyOf(oldScale, n);
-							System.arraycopy(oldScale, d + 1, scales[k], d, scales[k].length - d);
-						}
-					} else ++d;
-				}
+				/* hyperslice and map axes */
+				final int[] allAxes = allAxes(axes, n);
 
-				final BdvOptions bdvOptions = n == 2 ? Bdv.options().is2D() : Bdv.options();
+				Arrays.setAll(vras, k -> permuteAll(vras[k], allAxes));
+
+				System.out.println(Arrays.toString(axes) + " " + Arrays.toString(allAxes));
+
+				for (int d = axes.length; d < n; ++d) {
+					for (int k = 0; k < vras.length; ++k)
+						vras[k] = Views.hyperSlice(vras[k], d, Math.round(offset[allAxes[d]]));
+				}
+				for (int k = 0; k < vras.length; ++k)
+					if (vras[k].numDimensions() < 3)
+						vras[k] = Views.addDimension(vras[k], 0, 0);
+
+				final double[] mappedOffset = new double[] {
+						offset[allAxes[0]],
+						offset[allAxes[1]],
+						axes.length > 2 ? offset[allAxes[2]] : 0
+				};
 
 				final RandomAccessibleInterval<VolatileDoubleType>[] convertedSources = new RandomAccessibleInterval[n5Sources.getA().length];
 				for (int k = 0; k < vras.length; ++k) {
@@ -469,7 +515,7 @@ public class View {
 
 				/* offset transform */
 				final AffineTransform3D sourceTransform = new AffineTransform3D();
-				sourceTransform.setTranslation(offset);
+				sourceTransform.setTranslation(mappedOffset);
 				System.out.println(groupName + " " + sourceTransform.toString());
 
 				final RandomAccessibleIntervalMipmapSource<VolatileDoubleType> mipmapSource =
@@ -546,5 +592,47 @@ public class View {
 		}
 
 		return Views.interval(permuteAll((RandomAccessible<T>)interval, axes), min, max);
+	}
+
+	private static final int[] allAxes(final int[] axes, final int n) {
+
+		final int[] sortedAxes = axes.clone();
+		Arrays.sort(sortedAxes);
+		final int[] allAxes = Arrays.copyOf(axes, n);
+		int b = sortedAxes.length;
+		int c = 0;
+		for (int a = 0; a < axes.length; ++c) {
+			if (sortedAxes[a] > c)
+				allAxes[b++] = c;
+			else
+				++a;
+		}
+		for (; c < allAxes.length; ++c, ++b)
+			allAxes[b] = c;
+
+		return allAxes;
+	}
+
+	private static final int datasetN(final N5Reader n5, final String group) throws IOException {
+
+		if (n5.datasetExists(group))
+			return n5.getAttribute(group, "dimensions", long[].class).length;
+		else
+			return n5.getAttribute(group + "/s0", "dimensions", long[].class).length;
+	}
+
+	private static final double[] datasetOffset(final N5Reader n5, final String group) {
+
+		double[] offset;
+		try {
+			offset = n5.getAttribute(group, "offset", double[].class);
+			if (offset == null)
+				offset = n5.getAttribute(group + "/s0", "offset", double[].class);
+			if (offset != null)
+				offset = Arrays.copyOf(offset, datasetN(n5, group));
+		} catch (final IOException e) {
+			offset = null;
+		}
+		return offset;
 	}
 }
