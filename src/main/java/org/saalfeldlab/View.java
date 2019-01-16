@@ -154,6 +154,7 @@ import net.imglib2.type.NativeType;
 import net.imglib2.type.numeric.ARGBType;
 import net.imglib2.type.volatiles.AbstractVolatileNativeRealType;
 import net.imglib2.type.volatiles.VolatileDoubleType;
+import net.imglib2.util.Intervals;
 import net.imglib2.util.Pair;
 import net.imglib2.util.ValuePair;
 import net.imglib2.view.IntervalView;
@@ -468,7 +469,7 @@ public class View {
 
 				for (int d = axes.length; d < n; ++d) {
 					for (int k = 0; k < vras.length; ++k)
-						vras[k] = Views.hyperSlice(vras[k], d, Math.round(offset[allAxes[d]]));
+						vras[k] = Views.hyperSlice(vras[k], axes.length, Math.round(offset[allAxes[d]]));
 				}
 				for (int k = 0; k < vras.length; ++k)
 					if (vras[k].numDimensions() < 3)
@@ -510,7 +511,12 @@ public class View {
 							converter,
 							new VolatileDoubleType());
 					final double[] scale = n5Sources.getB()[k];
-					Arrays.setAll(scale, j -> scale[j] * resolution[j]);
+					final double[] mappedScale = new double[] {
+							scale[allAxes[0]] * resolution[0],
+							scale[allAxes[1]] * resolution[1],
+							axes.length > 2 ? scale[allAxes[2]] * resolution[2] : resolution[2]
+					};
+					n5Sources.getB()[k] = mappedScale;
 				}
 
 				/* offset transform */
@@ -557,15 +563,24 @@ public class View {
 	 * a source component is mapped to several target components!</em>
 	 * </p>
 	 */
-	private static final <T> MixedTransformView<T> permuteAll(final RandomAccessible<T> randomAccessible, final int... axes) {
+	private static final <T> IntervalView<T> permuteAll(final RandomAccessibleInterval<T> interval, final int... axes) {
 
-		final int n = randomAccessible.numDimensions();
+		final int n = interval.numDimensions();
+
+		System.out.println("before: " + Arrays.toString(Intervals.dimensionsAsLongArray(interval)));
 
 		assert n == axes.length : "The number of source dimensions must match the number of axes.";
 
-		final MixedTransform t = new MixedTransform(n, n);
-		t.setComponentMapping(axes);
-		return new MixedTransformView<T>(randomAccessible, t);
+		final long[] min = new long[n];
+		final long[] max = new long[n];
+		for (int d = 0; d < n; ++d) {
+			min[d] = interval.min(axes[d]);
+			max[d] = interval.max(axes[d]);
+		}
+
+		System.out.println("after: " + Arrays.toString(Intervals.dimensionsAsLongArray(Views.interval(permuteAll((RandomAccessible<T>)interval, axes), min, max))));
+
+		return Views.interval(permuteAll((RandomAccessible<T>)interval, axes), min, max);
 	}
 
 	/**
@@ -578,20 +593,15 @@ public class View {
 	 * a source component is mapped to several target components!</em>
 	 * </p>
 	 */
-	private static final <T> IntervalView<T> permuteAll(final RandomAccessibleInterval<T> interval, final int... axes) {
+	private static final <T> MixedTransformView<T> permuteAll(final RandomAccessible<T> randomAccessible, final int... axes) {
 
-		final int n = interval.numDimensions();
+		final int n = randomAccessible.numDimensions();
 
 		assert n == axes.length : "The number of source dimensions must match the number of axes.";
 
-		final long[] min = new long[n];
-		final long[] max = new long[n];
-		for (int d = 0; d < n; ++d) {
-			min[d] = interval.min(axes[d]);
-			max[d] = interval.max(axes[d]);
-		}
-
-		return Views.interval(permuteAll((RandomAccessible<T>)interval, axes), min, max);
+		final MixedTransform t = new MixedTransform(n, n);
+		t.setComponentMapping(axes);
+		return new MixedTransformView<T>(randomAccessible, t);
 	}
 
 	private static final int[] allAxes(final int[] axes, final int n) {
