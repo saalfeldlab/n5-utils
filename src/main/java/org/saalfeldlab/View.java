@@ -193,7 +193,7 @@ public class View implements Callable<Void> {
 	}
 
 	@Option(names = {"-i", "--container"}, required = true, description = "container paths, e.g. -i $HOME/fib19.n5 -i /nrs/flyem ...")
-	private final List<String> containerPaths = null;
+	private List<String> containerPaths = null;
 
 	@Option(names = {"-d", "--datasets"}, required = true, description = "comma separated list of datasets, one list per container, e.g. -d '/slab-26,slab-27' -d '/volumes/raw' ...")
 	private List<String> groupLists = null;

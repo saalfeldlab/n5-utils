@@ -153,10 +153,10 @@ public class Equals implements Callable<Boolean> {
 	@Option(names = {"-i2", "--inputContainer2" }, required = true, description = "container path, e.g. /nrs/flyem/data/tmp/Z0115-22.h5")
 	private String inputContainerPath2 = null;
 
-	@Option(names = {"-d1", "--dataset1" }, description = "dataset name, e.g. /volumes/raw")
+	@Option(names = {"-d1", "--dataset1" }, required = true, description = "dataset name, e.g. /volumes/raw")
 	private String datasetName1 = null;
 
-	@Option(names = {"-d2", "--dataset2" }, description = "dataset name, e.g. /volumes/raw")
+	@Option(names = {"-d2", "--dataset2" }, required = true, description = "dataset name, e.g. /volumes/raw")
 	private String datasetName2 = null;
 
 	protected static void reorder(final long[] array) {
@@ -235,7 +235,8 @@ public class Equals implements Callable<Boolean> {
 
 	public static void main(final String... args) {
 
-		CommandLine.call(new Equals(), args);
+		final Boolean result = CommandLine.call(new Equals(), args);
+		if (result != null) System.out.println(result);
 	}
 }
 
