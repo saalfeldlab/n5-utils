@@ -120,11 +120,11 @@
 package org.saalfeldlab;
 
 import java.io.IOException;
-import java.io.Serializable;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -141,145 +141,59 @@ import org.janelia.saalfeldlab.n5.XzCompression;
 import org.janelia.saalfeldlab.n5.hdf5.N5HDF5Reader;
 import org.janelia.saalfeldlab.n5.hdf5.N5HDF5Writer;
 import org.janelia.saalfeldlab.n5.imglib2.N5Utils;
-import org.kohsuke.args4j.CmdLineParser;
-import org.kohsuke.args4j.Option;
 import org.saalfeldlab.N5Factory.N5Options;
 
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.type.NativeType;
+import picocli.CommandLine;
+import picocli.CommandLine.Option;
 
 /**
  *
  *
  * @author Stephan Saalfeld &lt;saalfelds@janelia.hhmi.org&gt;
  */
-public class Copy {
+public class Copy implements Callable<Void> {
 
-	protected final N5Reader n5Reader;
-	protected final N5Writer n5Writer;
-	protected final int[] blockSize;
-	protected final Compression compression;
-	protected final int numProc;
+	protected N5Reader n5Reader;
+	protected N5Writer n5Writer;
+	protected int[] blockSize;
+	protected Compression compression;
+	protected final int numProc = Runtime.getRuntime().availableProcessors();
 
-	@SuppressWarnings("serial")
-	public static class Options implements Serializable {
+	@Option(names = {"-i", "--inputContainer" }, required = true, description = "container path, e.g. /nrs/flyem/data/tmp/Z0115-22.h5")
+	private String inputContainerPath = null;
 
-		@Option(name = "-i", aliases = { "--inputContainer" }, required = true, usage = "container path, e.g. /nrs/flyem/data/tmp/Z0115-22.h5")
-		private String inputContainerPath = null;
+	@Option(names = {"-o", "--outputContainer" }, required = true, description = "container path, e.g. /nrs/flyem/data/tmp/Z0115-22.n5")
+	private String outputContainerPath = null;
 
-		@Option(name = "-o", aliases = { "--outputContainer" }, required = true, usage = "container path, e.g. /nrs/flyem/data/tmp/Z0115-22.n5")
-		private String outputContainerPath = null;
+	@Option(names = {"-d", "--group" }, description = "group or dataset name, e.g. /volumes/raw")
+	private List<String> groupNames = null;
 
-		@Option(name = "-d", aliases = { "--group" }, usage = "group or dataset name, e.g. /volumes/raw")
-		private List<String> groupNames = null;
+	@Option(names = {"-b", "--blockSize" }, description = "override blockSize of input datasets, e.g. 256,256,26")
+	private String blockSizeString = null;
 
-		@Option(name = "-b", aliases = { "--blockSize" }, usage = "override blockSize of input datasets, e.g. 256,256,26")
-		private String blockSizeString = null;
+	@Option(names = {"-c", "--compression" }, description = "override compression type of input N5 datasets, e.g. gzip (HDF5 inputs are copied without compression by default, in this case this option sets the output compression)")
+	private String compressionString = "";
 
-		@Option(name = "-c", aliases = { "--compression" }, usage = "override compression type of input N5 datasets, e.g. gzip (HDF5 inputs are copied without compression by default, in this case this option sets the output compression)")
-		private String compressionString = "";
+	protected static final int[] parseCSIntArray(final String csv) {
 
-		private boolean parsedSuccessfully = false;
-		private N5Reader n5Reader;
-		private N5Writer n5Writer;
-		private int[] blockSize;
-		private Compression compression;
-
-		protected static final int[] parseCSIntArray(final String csv) {
-
-			final String[] stringValues = csv.split(",\\s*");
-			final int[] array = new int[stringValues.length];
-			try {
-				for (int i = 0; i < array.length; ++i)
-					array[i] = Integer.parseInt(stringValues[i]);
-			} catch (final NumberFormatException e) {
-				e.printStackTrace(System.err);
-				return null;
-			}
-			return array;
+		final String[] stringValues = csv.split(",\\s*");
+		final int[] array = new int[stringValues.length];
+		try {
+			for (int i = 0; i < array.length; ++i)
+				array[i] = Integer.parseInt(stringValues[i]);
+		} catch (final NumberFormatException e) {
+			e.printStackTrace(System.err);
+			return null;
 		}
-
-		public Options(final String[] args) {
-
-			final CmdLineParser parser = new CmdLineParser(this);
-			try {
-				parser.parseArgument(args);
-
-				if (blockSizeString != null)
-					blockSize = parseCSIntArray(blockSizeString);
-
-				if (compressionString == null)
-					compression = null;
-				else {
-					switch (compressionString.toLowerCase()) {
-					case "raw":
-						compression = new RawCompression();
-						break;
-					case "bzip2":
-						compression = new Bzip2Compression();
-						break;
-					case "lz4":
-						compression = new Lz4Compression();
-						break;
-					case "xz":
-						compression = new XzCompression();
-						break;
-					case "gzip":
-						compression = new GzipCompression();
-						break;
-					default:
-						compression = null;
-					}
-				}
-
-				n5Reader = N5Factory.createN5Reader(new N5Options(inputContainerPath, blockSize, compression));
-				n5Writer = N5Factory.createN5Writer(new N5Options(outputContainerPath, blockSize, compression));
-
-				parsedSuccessfully = true;
-			} catch (final Exception e) {
-				System.err.println(e.getMessage());
-				parser.printUsage(System.err);
-			}
-		}
-
-		public N5Reader getReader() {
-
-			return n5Reader;
-		}
-
-		public N5Writer getWriter() {
-
-			return n5Writer;
-		}
-
-		public int[] getBlockSize() {
-
-			return blockSize;
-		}
-
-		public Compression getCompression() {
-
-			return compression;
-		}
-
-		public List<String> getGroupNames() {
-
-			return groupNames;
-		}
-
-		public boolean isParsedSuccessfully() {
-
-			return parsedSuccessfully;
-		}
+		return array;
 	}
 
-	public Copy(final Options options) {
+	public static final void main(final String... args) {
 
-		n5Reader = options.getReader();
-		n5Writer = options.getWriter();
-		blockSize = options.getBlockSize();
-		compression = options.getCompression();
-		numProc = Runtime.getRuntime().availableProcessors();
+		final Copy copy = new Copy();
+		CommandLine.call(copy, args);
 	}
 
 	protected static void reorder(final long[] array) {
@@ -396,27 +310,50 @@ public class Copy {
 		}
 	}
 
-	public static void main(final String... args) throws IOException, InterruptedException, ExecutionException {
+	@Override
+	public Void call() throws IOException, InterruptedException, ExecutionException {
 
-		final Options options = new Options(args);
+		blockSize = blockSizeString == null ? null : parseCSIntArray(blockSizeString);
 
-		if (!options.parsedSuccessfully)
-			return;
+		if (compressionString == null)
+			compression = null;
+		else {
+			switch (compressionString.toLowerCase()) {
+			case "raw":
+				compression = new RawCompression();
+				break;
+			case "bzip2":
+				compression = new Bzip2Compression();
+				break;
+			case "lz4":
+				compression = new Lz4Compression();
+				break;
+			case "xz":
+				compression = new XzCompression();
+				break;
+			case "gzip":
+				compression = new GzipCompression();
+				break;
+			default:
+				compression = null;
+			}
+		}
 
-		final Copy copy = new Copy(options);
-
-		final List<String> groupNames = options.getGroupNames();
+		n5Reader = N5Factory.createN5Reader(new N5Options(inputContainerPath, blockSize, compression));
+		n5Writer = N5Factory.createN5Writer(new N5Options(outputContainerPath, blockSize, compression));
 
 		if (groupNames == null)
-			copy.copyGroup("");
+			copyGroup("");
 		else {
 			for (final String groupName : groupNames)
-				if (copy.n5Reader.exists(groupName)) {
-					if (copy.n5Reader.datasetExists(groupName))
-						copy.copyDataset(groupName);
+				if (n5Reader.exists(groupName)) {
+					if (n5Reader.datasetExists(groupName))
+						copyDataset(groupName);
 					else
-						copy.copyGroup(groupName);
+						copyGroup(groupName);
 				}
 		}
+
+		return null;
 	}
 }
