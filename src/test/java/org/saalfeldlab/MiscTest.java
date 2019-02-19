@@ -8,8 +8,9 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Test;
 
-public class Test {
+public class MiscTest {
 
 	static final int[][] axess = new int[][]{
 			{0, 1},
@@ -43,7 +44,7 @@ public class Test {
 	public void tearDown() throws Exception {
 	}
 
-	@org.junit.Test
+	@Test
 	public final void testAllAxes() {
 
 		for (int i = 0; i < ns.length; ++i)

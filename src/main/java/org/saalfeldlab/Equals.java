@@ -126,8 +126,6 @@ import java.util.concurrent.ExecutionException;
 
 import org.janelia.saalfeldlab.n5.DatasetAttributes;
 import org.janelia.saalfeldlab.n5.N5Reader;
-import org.janelia.saalfeldlab.n5.hdf5.N5HDF5Reader;
-import org.janelia.saalfeldlab.n5.hdf5.N5HDF5Writer;
 import org.janelia.saalfeldlab.n5.imglib2.N5Utils;
 import org.saalfeldlab.N5Factory.N5Options;
 
@@ -158,42 +156,6 @@ public class Equals implements Callable<Boolean> {
 
 	@Option(names = {"-d2", "--dataset2" }, required = true, description = "dataset name, e.g. /volumes/raw")
 	private String datasetName2 = null;
-
-	protected static void reorder(final long[] array) {
-
-		long a;
-		final int max = array.length - 1;
-		for (int i = (max - 1) / 2; i >= 0; --i) {
-			final int j = max - i;
-			a = array[i];
-			array[i] = array[j];
-			array[j] = a;
-		}
-	}
-
-	protected static void reorder(final double[] array) {
-
-		double a;
-		final int max = array.length - 1;
-		for (int i = (max - 1) / 2; i >= 0; --i) {
-			final int j = max - i;
-			a = array[i];
-			array[i] = array[j];
-			array[j] = a;
-		}
-	}
-
-	protected void reorderIfNecessary(final double[] array) {
-
-		if ((n5Reader1 instanceof N5HDF5Reader) != (n5Reader2 instanceof N5HDF5Writer))
-			reorder(array);
-	}
-
-	protected void reorderIfNecessary(final long[] array) {
-
-		if ((n5Reader1 instanceof N5HDF5Reader) != (n5Reader2 instanceof N5HDF5Writer))
-			reorder(array);
-	}
 
 	protected <T extends Type<T>> Boolean datasetEquals() {
 
