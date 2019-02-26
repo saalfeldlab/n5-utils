@@ -128,6 +128,7 @@ import java.util.concurrent.Callable;
 import org.janelia.saalfeldlab.n5.N5Reader;
 import org.janelia.saalfeldlab.n5.imglib2.N5Utils;
 import org.saalfeldlab.N5Factory.N5Options;
+import org.scijava.util.ListUtils;
 
 import bdv.util.AxisOrder;
 import bdv.util.Bdv;
@@ -150,7 +151,6 @@ import net.imglib2.type.NativeType;
 import net.imglib2.type.numeric.ARGBType;
 import net.imglib2.type.volatiles.AbstractVolatileNativeRealType;
 import net.imglib2.type.volatiles.VolatileDoubleType;
-import net.imglib2.util.Intervals;
 import net.imglib2.util.Pair;
 import net.imglib2.util.ValuePair;
 import net.imglib2.view.IntervalView;
@@ -270,6 +270,8 @@ public class View implements Callable<Void> {
 	@Override
 	public Void call() throws IOException {
 
+		System.out.println(ListUtils.string(contrastStrings));
+
 		maxN = 2;
 		double[] resolution = new double[]{1, 1, 1, 1};
 		double[] contrast = new double[]{0, 255};
@@ -339,7 +341,7 @@ public class View implements Callable<Void> {
 				final String groupName = entry.groupNames[i];
 				final double[] res = entry.resolutions[i];
 				final double[] con = entry.contrastRanges[i];
-				final boolean isLabel = contrast == null;
+				final boolean isLabel = con == null;
 				final double[] off = entry.offsets[i];
 				final int[] ax = entry.axess[i];
 
@@ -374,7 +376,7 @@ public class View implements Callable<Void> {
 
 				Arrays.setAll(vras, k -> permuteAll(vras[k], allAxes));
 
-				System.out.println(Arrays.toString(ax) + " " + Arrays.toString(allAxes));
+				System.out.println("axes permutation: " + Arrays.toString(ax) + " -> " + Arrays.toString(allAxes));
 
 				for (int d = axes.length; d < n; ++d) {
 					for (int k = 0; k < vras.length; ++k)
@@ -522,7 +524,7 @@ public class View implements Callable<Void> {
 
 		final int n = interval.numDimensions();
 
-		System.out.println("before: " + Arrays.toString(Intervals.dimensionsAsLongArray(interval)));
+//		System.out.println("before: " + Arrays.toString(Intervals.dimensionsAsLongArray(interval)));
 
 		assert n == axes.length : "The number of source dimensions must match the number of axes.";
 
@@ -533,7 +535,7 @@ public class View implements Callable<Void> {
 			max[d] = interval.max(axes[d]);
 		}
 
-		System.out.println("after: " + Arrays.toString(Intervals.dimensionsAsLongArray(Views.interval(permuteAll((RandomAccessible<T>)interval, axes), min, max))));
+//		System.out.println("after: " + Arrays.toString(Intervals.dimensionsAsLongArray(Views.interval(permuteAll((RandomAccessible<T>)interval, axes), min, max))));
 
 		return Views.interval(permuteAll((RandomAccessible<T>)interval, axes), min, max);
 	}
