@@ -193,8 +193,11 @@ public class N5Factory {
 	@SuppressWarnings("unchecked")
 	private static <N5 extends N5Reader> N5 createN5(final N5Options options, final N5AccessType accessType) throws IOException {
 
-		final URI uri = URI.create(options.containerPath);
-		if (uri.getScheme() == null) {
+		URI uri = null;
+		try {
+			uri = URI.create(options.containerPath);
+		} catch (final IllegalArgumentException e) {}
+		if (uri == null || uri.getScheme() == null) {
 			if (isHDF5(options.containerPath, accessType))
 				return (N5) createN5HDF5(options.containerPath, options.blockSize, accessType);
 			else
