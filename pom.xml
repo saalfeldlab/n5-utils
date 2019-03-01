@@ -11,6 +11,8 @@
 		<version>25.0.0</version>
 	</parent>
 	<properties>
+		<!-- picocli - https://picocli.info/ -->
+		<picocli.version>3.9.5</picocli.version>
 		<enforcer.skip>true</enforcer.skip>
 	</properties>
 	<dependencies>

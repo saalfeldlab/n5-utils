@@ -128,7 +128,6 @@ import java.util.concurrent.Callable;
 import org.janelia.saalfeldlab.n5.N5Reader;
 import org.janelia.saalfeldlab.n5.imglib2.N5Utils;
 import org.saalfeldlab.N5Factory.N5Options;
-import org.scijava.util.ListUtils;
 
 import bdv.util.AxisOrder;
 import bdv.util.Bdv;
@@ -269,8 +268,6 @@ public class View implements Callable<Void> {
 
 	@Override
 	public Void call() throws IOException {
-
-		System.out.println(ListUtils.string(contrastStrings));
 
 		maxN = 2;
 		double[] resolution = new double[]{1, 1, 1, 1};
