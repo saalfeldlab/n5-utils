@@ -3,6 +3,8 @@ package org.saalfeldlab;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.Iterator;
 import java.util.Random;
 
@@ -38,6 +40,7 @@ public class CopyTest {
 		final Random rnd = new Random();
 		bytes = new byte[(int)dimensions[0] * (int)dimensions[1] * (int)dimensions[2]];
 		rnd.nextBytes(bytes);
+		Files.createDirectories(Paths.get(testDirPath).getParent());
 	}
 
 	@AfterClass
