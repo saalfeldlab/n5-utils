@@ -122,31 +122,38 @@ package org.saalfeldlab;
 import net.imglib2.converter.Converter;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.integer.UnsignedLongType;
+import net.imglib2.view.composite.RealComposite;
 
 /**
- * Converts a {@link RealType} above threshold into an {@link UnsignedLongType}.
+ * Converts a {@link RealComposite} into an {@link UnsignedLongType}.
  *
  * @author Stephan Saalfeld &lt;saalfelds@janelia.hhmi.org&gt;
  */
-public class ThresholdCompositeConverter<T extends RealType<T>> implements Converter<T, UnsignedLongType> {
+public class ThresholdRealCompositeConverter<T extends RealType<T>> implements Converter<RealComposite<T>, UnsignedLongType> {
 
-	protected final double threshold;
+	protected final double[] thresholds;
 
-	protected final long label;
+	protected final long[] labels;
 
 	protected final long bg;
 
-	public ThresholdCompositeConverter(final double threshold, final long label, final long bg) {
+	public ThresholdRealCompositeConverter(final double[] thresholds, final long[] labels, final long bg) {
 
-		this.threshold = threshold;
-		this.label = label;
+		this.thresholds = thresholds;
+		this.labels = labels;
 		this.bg = bg;
 	}
 
 	@Override
-	public void convert(final T input, final UnsignedLongType output) {
+	public void convert(final RealComposite<T> input, final UnsignedLongType output) {
 
-		output.set(threshold < input.getRealDouble() ? label : bg);
+		for (int i = thresholds.length - 1; i >= 0; --i) {
+			if (thresholds[i] < input.get(i).getRealDouble()) {
+				output.set(labels[i]);
+				return;
+			}
+		}
+		output.set(bg);
 	}
 
 }
