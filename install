@@ -1,6 +1,6 @@
 #!/bin/bash
 
-VERSION="0.0.4-SNAPSHOT"
+VERSION="0.0.5-SNAPSHOT"
 INSTALL_DIR=${1:-$(pwd)}
 OPSYS=${2:-"linux"}
 
@@ -27,38 +27,38 @@ mvn -Dmdep.outputFile=cp.txt -Dmdep.includeScope=runtime dependency:build-classp
 
 echo '#!/bin/bash' > n5-view
 echo '' >> n5-view
-echo "JAR=\$HOME/.m2/repository/org/saalfeldlab/n5-utils/${VERSION}/n5-utils-${VERSION}.jar" >> n5-view
+echo "JAR=\$HOME/.m2/repository/org/janelia/saalfeldlab/n5-utils/${VERSION}/n5-utils-${VERSION}.jar" >> n5-view
 echo 'java \' >> n5-view
 echo "  -Xmx${MEM}g \\" >> n5-view
 echo '  -XX:+UseConcMarkSweepGC \' >> n5-view
 echo -n '  -cp $JAR:' >> n5-view
 echo -n $(cat cp.txt) >> n5-view
 echo ' \' >> n5-view
-echo '  org.saalfeldlab.View "$@"' >> n5-view
+echo '  org.janelia.saalfeldlab.View "$@"' >> n5-view
 
 chmod a+x n5-view
 
 echo '#!/bin/bash' > n5-copy
 echo '' >> n5-copy
-echo "JAR=\$HOME/.m2/repository/org/saalfeldlab/n5-utils/${VERSION}/n5-utils-${VERSION}.jar" >> n5-copy
+echo "JAR=\$HOME/.m2/repository/org/janelia/saalfeldlab/n5-utils/${VERSION}/n5-utils-${VERSION}.jar" >> n5-copy
 echo 'java \' >> n5-copy
 echo "  -Xmx${MEM}g \\" >> n5-copy
 echo -n '  -cp $JAR:' >> n5-copy
 echo -n $(cat cp.txt) >> n5-copy
 echo ' \' >> n5-copy
-echo '  org.saalfeldlab.Copy "$@"' >> n5-copy
+echo '  org.janelia.saalfeldlab.Copy "$@"' >> n5-copy
 
 chmod a+x n5-copy
 
 echo '#!/bin/bash' > n5-equals
 echo '' >> n5-equals
-echo "JAR=\$HOME/.m2/repository/org/saalfeldlab/n5-utils/${VERSION}/n5-utils-${VERSION}.jar" >> n5-equals
+echo "JAR=\$HOME/.m2/repository/org/janelia/saalfeldlab/n5-utils/${VERSION}/n5-utils-${VERSION}.jar" >> n5-equals
 echo 'java \' >> n5-equals
 echo "  -Xmx${MEM}g \\" >> n5-equals
 echo -n '  -cp $JAR:' >> n5-equals
 echo -n $(cat cp.txt) >> n5-equals
 echo ' \' >> n5-equals
-echo '  org.saalfeldlab.Equals "$@"' >> n5-equals
+echo '  org.janelia.saalfeldlab.Equals "$@"' >> n5-equals
 
 chmod a+x n5-equals
 rm cp.txt

@@ -117,17 +117,17 @@
  *
  *
  */
-package org.saalfeldlab;
+package org.janelia.saalfeldlab;
 
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 
+import org.janelia.saalfeldlab.N5Factory.N5Options;
 import org.janelia.saalfeldlab.n5.DatasetAttributes;
 import org.janelia.saalfeldlab.n5.N5Reader;
 import org.janelia.saalfeldlab.n5.imglib2.N5Utils;
-import org.saalfeldlab.N5Factory.N5Options;
 
 import net.imglib2.Cursor;
 import net.imglib2.RandomAccessibleInterval;

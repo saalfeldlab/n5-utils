@@ -117,7 +117,7 @@
  *
  *
  */
-package org.saalfeldlab;
+package org.janelia.saalfeldlab;
 
 import java.io.IOException;
 import java.net.URI;
