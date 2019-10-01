@@ -72,6 +72,11 @@
 			<groupId>net.sf.trove4j</groupId>
 			<artifactId>trove4j</artifactId>
 		</dependency>
+		<dependency>
+			<groupId>org.janelia.saalfeldlab</groupId>
+			<artifactId>n5-zarr</artifactId>
+			<version>0.0.2-beta</version>
+		</dependency>
 	</dependencies>
 
 	<repositories>
