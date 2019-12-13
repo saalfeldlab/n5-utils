@@ -342,7 +342,7 @@ public class View implements Callable<Void> {
 				final double[] off = entry.offsets[i];
 				final int[] ax = entry.axess[i];
 
-				System.out.println(n5 + " : " + groupName + ", " + Arrays.toString(res) + ", " + (isLabel ? " labels " : Arrays.toString(con)) + ", " + Arrays.toString(off));
+				System.out.println(n5 + " : " + groupName + ", " + Arrays.toString(res) + ", " + (isLabel ? " labels " : Arrays.toString(con)) + ", " + Arrays.toString(off) + ", Num axes: " + ax.length);
 
 				final Pair<RandomAccessibleInterval<NativeType>[], double[][]> n5Sources;
 				int n;
@@ -422,7 +422,7 @@ public class View implements Callable<Void> {
 					final double[] mappedScale = new double[] {
 							scale[allAxes[0]] * res[0],
 							scale[allAxes[1]] * res[1],
-							ax.length > 2 ? scale[allAxes[2]] * res[2] : res[2]
+							ax.length > 2 ? scale[allAxes[2]] * res[2] : 1
 					};
 					n5Sources.getB()[k] = mappedScale;
 				}
