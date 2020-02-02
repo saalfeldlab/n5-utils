@@ -120,13 +120,18 @@
 package org.janelia.saalfeldlab;
 
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.Callable;
 
 import org.janelia.saalfeldlab.N5Factory.N5Options;
+import org.janelia.saalfeldlab.n5.N5FSReader;
 import org.janelia.saalfeldlab.n5.N5Reader;
+import org.janelia.saalfeldlab.n5.N5Reader.Version;
 import org.janelia.saalfeldlab.n5.imglib2.N5Utils;
 
 import bdv.util.AxisOrder;
@@ -496,7 +501,7 @@ public class View implements Callable<Void> {
 	@SuppressWarnings( "unchecked" )
 	public static final void main(final String... args) {
 
-		CommandLine.call(new View(), args);
+		CommandLine.call(new View(), singlePathToArgs(args));
 	}
 
 	// hash code from https://stackoverflow.com/questions/664014/what-integer-hash-function-are-good-that-accepts-an-integer-hash-key
@@ -598,5 +603,45 @@ public class View implements Callable<Void> {
 			offset = null;
 		}
 		return offset;
+	}
+
+	private static final String[] singlePathToArgs(final String... args) {
+
+		if (args.length == 1) {
+			final Path path = Paths.get(args[0]).toAbsolutePath();
+			if (
+					Files.exists(path) &&
+					Files.isDirectory(path)) {
+				for (int i = path.getNameCount(); i > 0; --i) {
+					final Path subpath = path.subpath(0, i);
+					try {
+						final String n5Path = "/" + subpath.toString();
+						final N5FSReader n5 = new N5FSReader(n5Path);
+						Version version;
+						try {
+							version = n5.getVersion();
+						} catch (final IOException f) {
+							f.printStackTrace(System.err);
+							continue;
+						}
+						if (version != null && version.getMajor() > 0) {
+							final String datasetPath = "/" + path.subpath(i, path.getNameCount()).toString();
+							if (n5.exists(datasetPath)) {
+								return new String[] {
+										"-i",
+										n5Path,
+										"-d",
+										datasetPath};
+								}
+						}
+					} catch (final Exception e) {
+						e.printStackTrace(System.err);
+						return args;
+					}
+				}
+			}
+			return args;
+		} else
+			return args;
 	}
 }
