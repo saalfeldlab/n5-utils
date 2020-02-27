@@ -214,6 +214,12 @@ public class View implements Callable<Void> {
 	@Option(names = {"-a", "--axes"}, description = "comma separated list of axes to be displayed as XY[Z[T]], one per dataset or all following the last, e.g. -a '0,2,1'")
 	private List<String> axesStrings = null;
 
+	@Option(names = {"-t", "--threads"}, description = "number of rendering threads, e.g. -t 4")
+	private int numRenderingThreads = 3;
+
+	@Option(names = {"-s", "--scales"}, split = ",", description = "comma separated list of screen scales, e.g. -s 1.0,0.5,0.25")
+	private double[] screenScales = new double[] {1.0, 0.5, 0.25, 0.125};
+
 	private int maxN = 2;
 
 	private final ArrayList<ReaderInfo> readerInfos = new ArrayList<>();
@@ -225,20 +231,6 @@ public class View implements Callable<Void> {
 			final int n = Math.min(array.length, stringValues.length);
 			for (int i = 0; i < n; ++i)
 				array[i] = Double.parseDouble(stringValues[i]);
-		} catch (final NumberFormatException e) {
-			e.printStackTrace(System.err);
-			return false;
-		}
-		return true;
-	}
-
-	private static final boolean parseCSIntArray(final String csv, final int[] array) {
-
-		final String[] stringValues = csv.split(",\\s*");
-		try {
-			final int n = Math.min(array.length, stringValues.length);
-			for (int i = 0; i < n; ++i)
-				array[i] = Integer.parseInt(stringValues[i]);
 		} catch (final NumberFormatException e) {
 			e.printStackTrace(System.err);
 			return false;
@@ -271,6 +263,7 @@ public class View implements Callable<Void> {
 		}
 	}
 
+	@SuppressWarnings("unchecked")
 	@Override
 	public Void call() throws IOException {
 
@@ -332,7 +325,16 @@ public class View implements Callable<Void> {
 		final int numProc = Runtime.getRuntime().availableProcessors();
 		final SharedQueue queue = new SharedQueue(Math.min(8, Math.max(1, numProc / 2)));
 		BdvStackSource<?> bdv = null;
-		final BdvOptions bdvOptions = maxN == 2 ? Bdv.options().is2D() : maxN == 4 ? BdvOptions.options().axisOrder(AxisOrder.XYZT) : Bdv.options();
+
+		final BdvOptions options = Bdv.options();
+		if (maxN == 2)
+			options.is2D();
+		else if (maxN == 4)
+			options.axisOrder(AxisOrder.XYZT);
+
+		options.numRenderingThreads(numRenderingThreads);
+		options.screenScales(screenScales);
+
 
 		int id = 0;
 		for (final ReaderInfo entry : readerInfos) {
@@ -349,10 +351,12 @@ public class View implements Callable<Void> {
 
 				System.out.println(n5 + " : " + groupName + ", " + Arrays.toString(res) + ", " + (isLabel ? " labels " : Arrays.toString(con)) + ", " + Arrays.toString(off) + ", Num axes: " + ax.length);
 
+				@SuppressWarnings("rawtypes")
 				final Pair<RandomAccessibleInterval<NativeType>[], double[][]> n5Sources;
 				int n;
 				if (n5.datasetExists(groupName)) {
 					// this works for javac openjdk 8
+					@SuppressWarnings({"rawtypes"})
 					final RandomAccessibleInterval<NativeType> source = (RandomAccessibleInterval)N5Utils.openVolatile(n5, groupName);
 					n = source.numDimensions();
 					final double[] scale = new double[n];
@@ -365,7 +369,9 @@ public class View implements Callable<Void> {
 				}
 
 				/* make volatile */
+				@SuppressWarnings("rawtypes")
 				final RandomAccessibleInterval<NativeType>[] ras = n5Sources.getA();
+				@SuppressWarnings("rawtypes")
 				final RandomAccessibleInterval[] vras = new RandomAccessibleInterval[ras.length];
 				Arrays.setAll(vras, k ->
 					VolatileViews.wrapAsVolatile(
@@ -448,7 +454,7 @@ public class View implements Callable<Void> {
 
 				bdv = BdvFunctions.show(
 						mipmapSource,
-						bdv == null ? bdvOptions : bdvOptions.addTo(bdv));
+						bdv == null ? options : options.addTo(bdv));
 				bdv.setDisplayRange(0, 1000);
 				bdv.setColor(new ARGBType(argb(id++)));
 			}
@@ -498,7 +504,6 @@ public class View implements Callable<Void> {
 		return argb( r, g, b, 0xff );
 	}
 
-	@SuppressWarnings( "unchecked" )
 	public static final void main(final String... args) {
 
 		CommandLine.call(new View(), singlePathToArgs(args));
