@@ -202,22 +202,22 @@ public class View implements Callable<Void> {
 	@Option(names = {"-d", "--datasets"}, required = true, description = "comma separated list of datasets, one list per container, e.g. -d '/slab-26,slab-27' -d '/volumes/raw' ...")
 	private List<String> groupLists = null;
 
-	@Option(names = {"-r", "--resolution"}, description = "comma separated list of scale factors, one per dataset or all following the last, e.g. -r '4,4,40'")
+	@Option(names = {"-r", "--resolution"}, description = "comma separated list of scale factors, one per dataset or all following the last, e.g. -r '4,4,40' (default 1,1[,1[,1]])")
 	private List<String> resolutionStrings = null;
 
-	@Option(names = {"-c", "--contrast"}, description = "comma separated contrast range, one per dataset or all following the last, e.g. -c '0,255'")
+	@Option(names = {"-c", "--contrast"}, description = "comma separated contrast range to be mapped into [0,1000], one per dataset or all following the last, e.g. -c '0,255' (default 0,255)")
 	private List<String> contrastStrings = null;
 
-	@Option(names = {"-o", "--offset"}, description = "comma separated list of offsets (in scaled world coordinates), one per dataset or all following the last, e.g. -o '100.0,200.0,10.0'")
+	@Option(names = {"-o", "--offset"}, description = "comma separated list of offsets (in scaled world coordinates), one per dataset or all following the last, e.g. -o '100.0,200.0,10.0' (default 0,0[,0[,0]])")
 	private List<String> offsetStrings = null;
 
-	@Option(names = {"-a", "--axes"}, description = "comma separated list of axes to be displayed as XY[Z[T]], one per dataset or all following the last, e.g. -a '0,2,1'")
+	@Option(names = {"-a", "--axes"}, description = "comma separated list of axes to be displayed as XY[Z[T]], one per dataset or all following the last, e.g. -a '0,2,1' (default 0,1[,2[,3]])")
 	private List<String> axesStrings = null;
 
-	@Option(names = {"-t", "--threads"}, description = "number of rendering threads, e.g. -t 4")
+	@Option(names = {"-t", "--threads"}, description = "number of rendering threads, e.g. -t 4 (default 3)")
 	private int numRenderingThreads = 3;
 
-	@Option(names = {"-s", "--scales"}, split = ",", description = "comma separated list of screen scales, e.g. -s 1.0,0.5,0.25")
+	@Option(names = {"-s", "--scales"}, split = ",", description = "comma separated list of screen scales, e.g. -s 1.0,0.5,0.25 (default 1.0,0.75,0.5,0.25,0.125)")
 	private double[] screenScales = new double[] {1.0, 0.5, 0.25, 0.125};
 
 	private int maxN = 2;
