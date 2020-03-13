@@ -1,8 +1,8 @@
 package org.janelia.saalfeldlab;
 
 import net.imglib2.*;
-import net.imglib2.interpolation.randomaccess.NearestNeighborInterpolatorFactory;
 import net.imglib2.converter.Converters;
+import net.imglib2.interpolation.randomaccess.NLinearInterpolatorFactory;
 import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.realtransform.RealViews;
 import net.imglib2.realtransform.Scale3D;
@@ -103,7 +103,7 @@ public class ExtractLabels<T extends NativeType<T> & RealType<T>> implements Cal
 
         for (final String dataset : datasets) {
             final RandomAccessibleInterval<T> img = N5Utils.open(n5, dataset);
-            final RealRandomAccessible<T> interpolatedImg = Views.interpolate(Views.extendBorder(img), new NearestNeighborInterpolatorFactory<>());
+            final RealRandomAccessible<T> interpolatedImg = Views.interpolate(Views.extendBorder(img), new NLinearInterpolatorFactory<>());
             final RandomAccessible<T> upscaledImg = RealViews.affine(interpolatedImg, upscaleTransform);
 
             final double[] upscaledCropMin = new double[3], upscaledCropMax = new double[3];
