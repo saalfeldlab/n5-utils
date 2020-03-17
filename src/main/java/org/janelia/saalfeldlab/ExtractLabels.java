@@ -53,6 +53,9 @@ public class ExtractLabels<T extends NativeType<T> & RealType<T>> implements Cal
     @CommandLine.Option(names = {"-t", "--threshold"}, required = false, description = "threshold")
     private double threshold = 128;
 
+    @CommandLine.Option(names = {"-s", "--scale"}, required = false, description = "scaling")
+    private double scaling = 2;
+
     protected static final long[] parseCSLongArray(final String csv) {
 
         final String[] stringValues = csv.split(",\\s*");
@@ -94,7 +97,7 @@ public class ExtractLabels<T extends NativeType<T> & RealType<T>> implements Cal
 
         final AffineTransform3D upscaleTransform = new AffineTransform3D();
         upscaleTransform
-                .preConcatenate(new Scale3D(2, 2, 2));
+                .preConcatenate(new Scale3D(scaling, scaling, scaling));
 //                .preConcatenate(new Translation3D(-0.5, -0.5, -0.5));
 
         final ExecutorService threadPool = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
