@@ -11,10 +11,7 @@ import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.integer.ByteType;
 import net.imglib2.util.Intervals;
 import net.imglib2.view.Views;
-import org.janelia.saalfeldlab.n5.GzipCompression;
-import org.janelia.saalfeldlab.n5.N5FSReader;
-import org.janelia.saalfeldlab.n5.N5FSWriter;
-import org.janelia.saalfeldlab.n5.N5Reader;
+import org.janelia.saalfeldlab.n5.*;
 import org.janelia.saalfeldlab.n5.imglib2.N5Utils;
 import picocli.CommandLine;
 
@@ -87,9 +84,9 @@ public class ExtractLabels<T extends NativeType<T> & RealType<T>> implements Cal
     @Override
     public Void call() throws IOException, ExecutionException, InterruptedException {
 
-        final N5Reader n5 = new N5FSReader(containerPath);
+        final N5Reader n5Reader = new N5FSReader(containerPath);
         if (datasets == null)
-            datasets = Arrays.asList(n5.list("/"));
+            datasets = Arrays.asList(n5Reader.list("/"));
 
         final Interval cropInterval = new FinalInterval(
                 parseCSLongArray(cropMinStr),
@@ -105,7 +102,7 @@ public class ExtractLabels<T extends NativeType<T> & RealType<T>> implements Cal
         final int[] blockSize = blockSizeStr != null ? parseCSIntArray(blockSizeStr) : null;
 
         for (final String dataset : datasets) {
-            final RandomAccessibleInterval<T> img = N5Utils.open(n5, dataset);
+            final RandomAccessibleInterval<T> img = N5Utils.open(n5Reader, dataset);
             final RealRandomAccessible<T> interpolatedImg = Views.interpolate(Views.extendBorder(img), new NLinearInterpolatorFactory<>());
             final RandomAccessible<T> upscaledImg = RealViews.affine(interpolatedImg, upscaleTransform);
 
@@ -119,14 +116,27 @@ public class ExtractLabels<T extends NativeType<T> & RealType<T>> implements Cal
             final RandomAccessibleInterval<T> upscaledCrop = Views.interval(upscaledImg, upscaledCropInterval);
             final RandomAccessibleInterval<ByteType> upscaledCropMask = Converters.convert(upscaledCrop, (in, out) -> out.set(in.getRealDouble() >= threshold ? (byte)1 : 0), new ByteType());
 
-            final int[] outBlockSize = blockSize != null ? blockSize : n5.getDatasetAttributes(dataset).getBlockSize();
+            final int[] outBlockSize = blockSize != null ? blockSize : n5Reader.getDatasetAttributes(dataset).getBlockSize();
+            final String outputDatasetPath = Paths.get("volumes/labels", dataset).toString();
+            final N5Writer n5Writer = new N5FSWriter(outputPath);
+
             N5Utils.save(
                     upscaledCropMask,
-                    new N5FSWriter(outputPath),
-                    Paths.get("volumes/labels", dataset).toString(),
+                    n5Writer,
+                    outputDatasetPath,
                     outBlockSize,
                     new GzipCompression(),
                     threadPool);
+
+            final double[] inputResolution = n5Reader.getAttribute(dataset, "resolution", double[].class);
+            final double[] outputResolution = new double[3];
+            Arrays.setAll(outputResolution, d -> (inputResolution != null ? inputResolution[d] : 1) * scaling);
+            n5Writer.setAttribute(outputDatasetPath, "resolution", outputResolution);
+
+            final double[] inputOffset = n5Reader.getAttribute(dataset, "offset", double[].class);
+            final double[] outputOffset = new double[3];
+            Arrays.setAll(outputOffset, d -> (inputOffset != null ? inputOffset[d] : 0) + cropInterval.realMin(d));
+            n5Writer.setAttribute(outputDatasetPath, "offset", outputOffset);
         }
 
         threadPool.shutdown();
