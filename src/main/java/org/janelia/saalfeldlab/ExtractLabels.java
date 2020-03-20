@@ -8,7 +8,7 @@ import net.imglib2.realtransform.RealViews;
 import net.imglib2.realtransform.Scale3D;
 import net.imglib2.type.NativeType;
 import net.imglib2.type.numeric.RealType;
-import net.imglib2.type.numeric.integer.UnsignedByteType;
+import net.imglib2.type.numeric.integer.UnsignedLongType;
 import net.imglib2.util.Intervals;
 import net.imglib2.view.Views;
 import org.janelia.saalfeldlab.n5.*;
@@ -64,7 +64,8 @@ public class ExtractLabels implements Callable<Void> {
             Arrays.setAll(upscaledCropMax, d -> upscaledCropMax[d] - 1);
             final Interval upscaledCropInterval = Intervals.smallestContainingInterval(new FinalRealInterval(upscaledCropMin, upscaledCropMax));
             final RandomAccessibleInterval<T> upscaledCrop = Views.interval(upscaledImg, upscaledCropInterval);
-            final RandomAccessibleInterval<UnsignedByteType> upscaledCropMask = Converters.convert(upscaledCrop, (in, out) -> out.set(in.getRealDouble() >= threshold ? (byte)1 : 0), new UnsignedByteType());
+            // save as uint64 so that paintera recognizes it as label data
+            final RandomAccessibleInterval<UnsignedLongType> upscaledCropMask = Converters.convert(upscaledCrop, (in, out) -> out.set(in.getRealDouble() >= threshold ? 1 : 0), new UnsignedLongType());
 
             final int[] outBlockSize = blockSizeOptional.orElse(n5Reader.getDatasetAttributes(dataset).getBlockSize());
             final String outputDatasetPath = Paths.get("volumes/labels", dataset).toString();
@@ -78,9 +79,7 @@ public class ExtractLabels implements Callable<Void> {
                     new GzipCompression(),
                     threadPool);
 
-            // set Paintera-specific attributes
             n5Writer.setAttribute(outputDatasetPath, "maxId", 1);
-            n5Writer.setAttribute(outputDatasetPath, "painteraData", Collections.singletonMap("type", "label"));
 
             final double[] inputResolution = n5Reader.getAttribute(dataset, "resolution", double[].class);
             final double[] outputResolution = new double[3];
