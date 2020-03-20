@@ -17,10 +17,7 @@ import picocli.CommandLine;
 
 import java.io.IOException;
 import java.nio.file.Paths;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Optional;
-import java.util.OptionalDouble;
+import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -80,6 +77,10 @@ public class ExtractLabels implements Callable<Void> {
                     outBlockSize,
                     new GzipCompression(),
                     threadPool);
+
+            // set Paintera-specific attributes
+            n5Writer.setAttribute(outputDatasetPath, "maxId", 1);
+            n5Writer.setAttribute(outputDatasetPath, "painteraData", Collections.singletonMap("type", "label"));
 
             final double[] inputResolution = n5Reader.getAttribute(dataset, "resolution", double[].class);
             final double[] outputResolution = new double[3];
