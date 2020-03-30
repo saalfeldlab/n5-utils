@@ -2,15 +2,15 @@ package org.janelia.saalfeldlab;
 
 import bdv.viewer.Source;
 import bdv.viewer.ViewerPanel;
-import ij.IJ;
 import ij.ImagePlus;
 import ij.gui.GenericDialog;
-import net.imglib2.*;
+import net.imglib2.FinalInterval;
+import net.imglib2.Interval;
+import net.imglib2.RandomAccessibleInterval;
+import net.imglib2.RealPoint;
 import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.type.NativeType;
 import net.imglib2.type.numeric.NumericType;
-import net.imglib2.view.IntervalView;
-import net.imglib2.view.Views;
 import org.scijava.ui.behaviour.*;
 import org.scijava.ui.behaviour.io.InputTriggerConfig;
 import org.scijava.ui.behaviour.util.InputActionBindings;
@@ -21,10 +21,8 @@ import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
-import java.io.IOException;
-import java.util.*;
 import java.util.List;
-import java.util.concurrent.ExecutionException;
+import java.util.*;
 
 public class ExtractLabelsDialog< T extends NumericType< T > & NativeType< T > >
 {
@@ -38,6 +36,7 @@ public class ExtractLabelsDialog< T extends NumericType< T > & NativeType< T > >
     static private int width = 1024;
     static private int height = 1024;
     static private int depth = 512;
+    static private int scaling = 2;
     static private int threshold = 128;
     static private int blockSize = 128;
 
@@ -133,6 +132,7 @@ public class ExtractLabelsDialog< T extends NumericType< T > & NativeType< T > >
             gd.addNumericField( "width : ", width, 0, 5, "px" );
             gd.addNumericField( "height : ", height, 0, 5, "px" );
             gd.addNumericField( "depth : ", depth, 0, 5, "px" );
+            gd.addNumericField( "scaling : ", scaling, 0, 5, "" );
             gd.addNumericField( "threshold : ", threshold, 0, 5, "" );
             gd.addNumericField( "block size: ", blockSize, 0, 5, "" );
             gd.addMessage("Output path: " + outputPath);
@@ -177,6 +177,7 @@ public class ExtractLabelsDialog< T extends NumericType< T > & NativeType< T > >
             width = ( int )gd.getNextNumber();
             height = ( int )gd.getNextNumber();
             depth = ( int )gd.getNextNumber();
+            scaling = (int)gd.getNextNumber();
             threshold = (int)gd.getNextNumber();
             blockSize = (int)gd.getNextNumber();
 //            scaleLevel = ( int )gd.getNextNumber();
@@ -220,7 +221,7 @@ public class ExtractLabelsDialog< T extends NumericType< T > & NativeType< T > >
                         inputContainer,
                         cropInterval,
                         outputPath,
-                        OptionalDouble.empty(),
+                        OptionalDouble.of(scaling),
                         OptionalDouble.of(threshold),
                         Optional.empty(),
                         Optional.of(blockSizeArr));
