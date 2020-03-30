@@ -170,6 +170,9 @@ public class ViewCosem<T extends NativeType<T> & NumericType<T>>  implements Cal
     @Option(names = {"-r", "--raw"}, required = false, description = "path to raw data")
     private String rawDataPath = null;
 
+    @Option(names = {"-o", "--output"}, required = true, description = "output container path")
+    private String outputPath = null;
+
     @Option(names = {"-t", "--threads"}, description = "number of rendering threads, e.g. -t 4 (default 3)")
     private int numRenderingThreads = 3;
 
@@ -356,14 +359,16 @@ public class ViewCosem<T extends NativeType<T> & NumericType<T>>  implements Cal
         }
 
         // init extract labels dialog
-        initExtractLabelsDialog(bdv.getBdvHandle(), nonVolatileSources);
+        initExtractLabelsDialog(bdv.getBdvHandle(), nonVolatileSources, containerPath, outputPath);
 
         return null;
     }
 
     private static <T extends NumericType<T> & NativeType<T>> void initExtractLabelsDialog(
             final BdvHandle bdvHandle,
-            final List<Source<T>> sources) {
+            final List<Source<T>> sources,
+            final String inputContainer,
+            final String outputPath) {
 
         final TriggerBehaviourBindings bindings = bdvHandle.getTriggerbindings();
         final InputTriggerConfig config = new InputTriggerConfig();
@@ -371,6 +376,8 @@ public class ViewCosem<T extends NativeType<T> & NumericType<T>>  implements Cal
         final ExtractLabelsDialog extractLabelsDialog = new ExtractLabelsDialog(
                 bdvHandle.getViewerPanel(),
                 sources,
+                inputContainer,
+                outputPath,
                 config,
                 bdvHandle.getKeybindings(),
                 config);

@@ -5,9 +5,7 @@ import bdv.viewer.ViewerPanel;
 import ij.IJ;
 import ij.ImagePlus;
 import ij.gui.GenericDialog;
-import net.imglib2.RandomAccessible;
-import net.imglib2.RandomAccessibleInterval;
-import net.imglib2.RealPoint;
+import net.imglib2.*;
 import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.type.NativeType;
 import net.imglib2.type.numeric.NumericType;
@@ -23,9 +21,10 @@ import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
-import java.util.ArrayList;
-import java.util.Arrays;
+import java.io.IOException;
+import java.util.*;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 
 public class ExtractLabelsDialog< T extends NumericType< T > & NativeType< T > >
 {
@@ -33,10 +32,14 @@ public class ExtractLabelsDialog< T extends NumericType< T > & NativeType< T > >
 
     private RealPoint lastClick = new RealPoint( 3 );
     private List< Source< T > > sources;
+    private final String inputContainer;
+    private final String outputPath;
 
     static private int width = 1024;
     static private int height = 1024;
     static private int depth = 512;
+    static private int threshold = 128;
+    static private int blockSize = 128;
 
     // for behavioUrs
     private final BehaviourMap behaviourMap = new BehaviourMap();
@@ -50,12 +53,16 @@ public class ExtractLabelsDialog< T extends NumericType< T > & NativeType< T > >
     public ExtractLabelsDialog(
             final ViewerPanel viewer,
             final List< Source< T > > sources,
+            final String inputContainer,
+            final String outputPath,
             final InputTriggerConfig config,
             final InputActionBindings inputActionBindings,
             final KeyStrokeAdder.Factory keyProperties )
     {
         this.viewer = viewer;
         this.sources = sources;
+        this.inputContainer = inputContainer;
+        this.outputPath = outputPath;
 
         inputAdder = config.inputTriggerAdder( inputTriggerMap, "crop" );
 
@@ -116,7 +123,7 @@ public class ExtractLabelsDialog< T extends NumericType< T > & NativeType< T > >
             for ( int i = 0; i < centerPoint.length; ++i )
                 centerPoint[ i ] = Math.round( lastClick.getDoublePosition( i ) );
 
-            final GenericDialog gd = new GenericDialog( "Crop" );
+            final GenericDialog gd = new GenericDialog( "Extract labels" );
 
             gd.addCheckbox( "Custom_center_point", false );
             gd.addNumericField( "X : ", centerPoint[ 0 ], 0 );
@@ -126,6 +133,9 @@ public class ExtractLabelsDialog< T extends NumericType< T > & NativeType< T > >
             gd.addNumericField( "width : ", width, 0, 5, "px" );
             gd.addNumericField( "height : ", height, 0, 5, "px" );
             gd.addNumericField( "depth : ", depth, 0, 5, "px" );
+            gd.addNumericField( "threshold : ", threshold, 0, 5, "" );
+            gd.addNumericField( "block size: ", blockSize, 0, 5, "" );
+            gd.add(new Label("Output path: " + outputPath));
 //            gd.addNumericField( "scale_level : ", scaleLevel, 0 );
 //            gd.addCheckbox( "Single_4D_stack", single4DStack );
 
@@ -167,26 +177,20 @@ public class ExtractLabelsDialog< T extends NumericType< T > & NativeType< T > >
             width = ( int )gd.getNextNumber();
             height = ( int )gd.getNextNumber();
             depth = ( int )gd.getNextNumber();
+            threshold = (int)gd.getNextNumber();
+            blockSize = (int)gd.getNextNumber();
 //            scaleLevel = ( int )gd.getNextNumber();
 //            single4DStack = gd.getNextBoolean();
 
-            final int w = width;
-            final int h = height;
-            final int d = depth;
 //            final int s = scaleLevel;
-            final int s = 0;
-
-            final List< RandomAccessibleInterval< T > > channelsImages = new ArrayList<>();
-            long[] min = null;
+            final int scaleLevel = 0;
 
             final String centerPosStr = Arrays.toString( centerPoint );
             if ( customCenterPoint )
                 lastClick.setPosition( centerPoint );
 
             final int timepoint = 1;
-            for ( int channel = 0; channel < sources.size(); ++channel )
-            {
-                final Source< T > source = sources.get( channel );
+            final Source< T > source = sources.get( 0 );
 
 //                if ( s < 0 || s >= source.getNumMipmapLevels() )
 //                {
@@ -195,28 +199,45 @@ public class ExtractLabelsDialog< T extends NumericType< T > & NativeType< T > >
 //                    return;
 //                }
 
-                final RealPoint center = new RealPoint( 3 );
-                final AffineTransform3D transform = new AffineTransform3D();
-                source.getSourceTransform( timepoint, s, transform );
-                transform.applyInverse( center, lastClick );
+            final RealPoint center = new RealPoint( 3 );
+            final AffineTransform3D transform = new AffineTransform3D();
+            source.getSourceTransform( timepoint, scaleLevel, transform );
+            transform.applyInverse( center, lastClick );
 
-                min = new long[] {
-                        Math.round( center.getDoublePosition( 0 ) - 0.5 * w ),
-                        Math.round( center.getDoublePosition( 1 ) - 0.5 * h ),
-                        Math.round( center.getDoublePosition( 2 ) - 0.5 * d ) };
-                final long[] size = new long[] { w, h, d };
+            final long[] size = new long[] { width, height, depth };
+            final long[] min = new long[3], max = new long[3];
+            Arrays.setAll(min, d -> Math.round( center.getDoublePosition(d) - 0.5 * size[d] ) );
+            Arrays.setAll(max, d -> min[d] + size[d] - 1);
+            final Interval cropInterval = new FinalInterval(min, max);
 
-                IJ.log( String.format( "Cropping %s pixels at %s using scale level %d", Arrays.toString( size ), Arrays.toString( min ), s ) );
+            final int[] blockSizeArr = new int[3];
+            Arrays.fill(blockSizeArr, blockSize);
 
-                final RandomAccessibleInterval< T > img = source.getSource( 0, s );
-                final RandomAccessible< T > imgExtended = Views.extendZero( img );
-                final IntervalView< T > crop = Views.offsetInterval( imgExtended, min, size );
+            try {
+                System.out.println("Extracting labels in interval min=" + Arrays.toString(min) + ", max=" + Arrays.toString(max) + " to " + outputPath);
 
-                channelsImages.add( crop );
+                ExtractLabels.extractLabels(
+                        inputContainer,
+                        cropInterval,
+                        outputPath,
+                        OptionalDouble.empty(),
+                        OptionalDouble.of(threshold),
+                        Optional.empty(),
+                        Optional.of(blockSizeArr));
+
+                System.out.println("Done!");
+            } catch (final Exception e) {
+                e.printStackTrace();
+            }
+
+//                final RandomAccessibleInterval< T > img = source.getSource( 0, s );
+//                final RandomAccessible< T > imgExtended = Views.extendZero( img );
+//                final IntervalView< T > crop = Views.offsetInterval( imgExtended, min, size );
+//
+//                channelsImages.add( crop );
 
 //                if ( !single4DStack )
 //                    show( crop, "channel " + channel + " " + centerPosStr );
-            }
 
 //            if ( single4DStack )
 //            {
