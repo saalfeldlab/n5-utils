@@ -231,6 +231,9 @@ public class ViewCosem implements Callable<Void> {
             final Pair<String, String> rawDataN5AndGroup = pathToN5ContainerAndGroup(rawDataPath);
             if (rawDataN5AndGroup == null)
                 throw new IllegalArgumentException("cannot extract N5 container and dataset path from raw data parameter");
+
+            System.out.println("Add raw data: N5=" + rawDataN5AndGroup.getA() + ",  data=" + rawDataN5AndGroup.getB());
+
             final N5Reader n5 = N5Factory.createN5Reader(new N5Options(rawDataN5AndGroup.getA(), new int[] {64}, null));
             final String rawDataGroup = rawDataN5AndGroup.getB();
             final double[] resolution = n5.getAttribute(rawDataGroup, "resolution", double[].class);
