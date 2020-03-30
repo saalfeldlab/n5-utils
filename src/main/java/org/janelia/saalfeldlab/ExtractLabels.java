@@ -8,7 +8,7 @@ import net.imglib2.realtransform.RealViews;
 import net.imglib2.realtransform.Scale3D;
 import net.imglib2.type.NativeType;
 import net.imglib2.type.numeric.RealType;
-import net.imglib2.type.numeric.integer.ByteType;
+import net.imglib2.type.numeric.integer.UnsignedLongType;
 import net.imglib2.util.Intervals;
 import net.imglib2.view.Views;
 import org.janelia.saalfeldlab.n5.*;
@@ -17,10 +17,7 @@ import picocli.CommandLine;
 
 import java.io.IOException;
 import java.nio.file.Paths;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Optional;
-import java.util.OptionalDouble;
+import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -67,7 +64,8 @@ public class ExtractLabels implements Callable<Void> {
             Arrays.setAll(upscaledCropMax, d -> upscaledCropMax[d] - 1);
             final Interval upscaledCropInterval = Intervals.smallestContainingInterval(new FinalRealInterval(upscaledCropMin, upscaledCropMax));
             final RandomAccessibleInterval<T> upscaledCrop = Views.interval(upscaledImg, upscaledCropInterval);
-            final RandomAccessibleInterval<ByteType> upscaledCropMask = Converters.convert(upscaledCrop, (in, out) -> out.set(in.getRealDouble() >= threshold ? (byte)1 : 0), new ByteType());
+            // save as uint64 so that paintera recognizes it as label data
+            final RandomAccessibleInterval<UnsignedLongType> upscaledCropMask = Converters.convert(upscaledCrop, (in, out) -> out.set(in.getRealDouble() >= threshold ? 1 : 0), new UnsignedLongType());
 
             final int[] outBlockSize = blockSizeOptional.orElse(n5Reader.getDatasetAttributes(dataset).getBlockSize());
             final String outputDatasetPath = Paths.get("volumes/labels", dataset).toString();
@@ -80,6 +78,8 @@ public class ExtractLabels implements Callable<Void> {
                     outBlockSize,
                     new GzipCompression(),
                     threadPool);
+
+            n5Writer.setAttribute(outputDatasetPath, "maxId", 1);
 
             final double[] inputResolution = n5Reader.getAttribute(dataset, "resolution", double[].class);
             final double[] outputResolution = new double[3];
