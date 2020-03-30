@@ -135,7 +135,7 @@ public class ExtractLabelsDialog< T extends NumericType< T > & NativeType< T > >
             gd.addNumericField( "depth : ", depth, 0, 5, "px" );
             gd.addNumericField( "threshold : ", threshold, 0, 5, "" );
             gd.addNumericField( "block size: ", blockSize, 0, 5, "" );
-            gd.add(new Label("Output path: " + outputPath));
+            gd.addMessage("Output path: " + outputPath);
 //            gd.addNumericField( "scale_level : ", scaleLevel, 0 );
 //            gd.addCheckbox( "Single_4D_stack", single4DStack );
 
