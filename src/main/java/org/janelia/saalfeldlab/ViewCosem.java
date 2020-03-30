@@ -136,6 +136,7 @@ import net.imglib2.type.numeric.NumericType;
 import net.imglib2.type.volatiles.AbstractVolatileNativeRealType;
 import net.imglib2.type.volatiles.VolatileDoubleType;
 import net.imglib2.util.Pair;
+import net.imglib2.util.Util;
 import net.imglib2.util.ValuePair;
 import org.janelia.saalfeldlab.N5Factory.N5Options;
 import org.janelia.saalfeldlab.n5.N5FSReader;
@@ -161,7 +162,7 @@ import java.util.concurrent.Callable;
  *
  * @author Stephan Saalfeld &lt;saalfelds@janelia.hhmi.org&gt;
  */
-public class ViewCosem implements Callable<Void> {
+public class ViewCosem<T extends NativeType<T> & NumericType<T>>  implements Callable<Void> {
 
     @Option(names = {"-i", "--container"}, required = true, description = "container path")
     private String containerPath = null;
@@ -299,12 +300,12 @@ public class ViewCosem implements Callable<Void> {
         final String[] datasets = n5.list("");
 
         int id = 1;
-        final List<Source> sources = new ArrayList<>();
+        final List<Source<T>> nonVolatileSources = new ArrayList<>();
 
         for (final String dataset : datasets) {
             System.out.println("Opening dataset /" + dataset);
             final double[] resolution = n5.getAttribute(dataset, "resolution", double[].class);
-            final RandomAccessibleInterval<NativeType> source = (RandomAccessibleInterval)N5Utils.openVolatile(n5, dataset);
+            final RandomAccessibleInterval<T> source = (RandomAccessibleInterval)N5Utils.openVolatile(n5, dataset);
 
             final RandomAccessibleInterval volatileSource = VolatileViews.wrapAsVolatile(
                             source,
@@ -341,11 +342,18 @@ public class ViewCosem implements Callable<Void> {
             bdv.setDisplayRange(0, 1000);
             bdv.setColor(new ARGBType(argb(id++)));
 
-            sources.add(mipmapSource);
+            final RandomAccessibleIntervalMipmapSource<T> nonVolatileMipmapSource = new RandomAccessibleIntervalMipmapSource<>(
+                    new RandomAccessibleInterval[] {source},
+                    Util.getTypeFromInterval(source),
+                    new double[][] {resolution.clone()},
+                    new FinalVoxelDimensions("nm", resolution),
+                    sourceTransform,
+                    dataset);
+            nonVolatileSources.add(nonVolatileMipmapSource);
         }
 
         // init extract labels dialog
-        initExtractLabelsDialog(bdv.getBdvHandle(), (List)sources);
+        initExtractLabelsDialog(bdv.getBdvHandle(), nonVolatileSources);
 
         return null;
     }
