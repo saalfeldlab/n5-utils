@@ -122,6 +122,7 @@ package org.janelia.saalfeldlab;
 import bdv.util.*;
 import bdv.util.volatiles.SharedQueue;
 import bdv.util.volatiles.VolatileViews;
+import bdv.viewer.Source;
 import mpicbg.spim.data.sequence.FinalVoxelDimensions;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.cache.volatiles.CacheHints;
@@ -131,6 +132,7 @@ import net.imglib2.converter.Converters;
 import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.type.NativeType;
 import net.imglib2.type.numeric.ARGBType;
+import net.imglib2.type.numeric.NumericType;
 import net.imglib2.type.volatiles.AbstractVolatileNativeRealType;
 import net.imglib2.type.volatiles.VolatileDoubleType;
 import net.imglib2.util.Pair;
@@ -140,6 +142,8 @@ import org.janelia.saalfeldlab.n5.N5FSReader;
 import org.janelia.saalfeldlab.n5.N5Reader;
 import org.janelia.saalfeldlab.n5.N5Reader.Version;
 import org.janelia.saalfeldlab.n5.imglib2.N5Utils;
+import org.scijava.ui.behaviour.io.InputTriggerConfig;
+import org.scijava.ui.behaviour.util.TriggerBehaviourBindings;
 import picocli.CommandLine;
 import picocli.CommandLine.Option;
 
@@ -147,7 +151,9 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.Callable;
 
 /**
@@ -291,7 +297,9 @@ public class ViewCosem implements Callable<Void> {
         // add labels
         final N5Reader n5 = N5Factory.createN5Reader(new N5Options(containerPath, new int[] {64}, null));
         final String[] datasets = n5.list("");
+
         int id = 1;
+        final List<Source> sources = new ArrayList<>();
 
         for (final String dataset : datasets) {
             System.out.println("Opening dataset /" + dataset);
@@ -332,9 +340,32 @@ public class ViewCosem implements Callable<Void> {
                     bdv == null ? options : options.addTo(bdv));
             bdv.setDisplayRange(0, 1000);
             bdv.setColor(new ARGBType(argb(id++)));
+
+            sources.add(mipmapSource);
         }
 
+        // init extract labels dialog
+        initExtractLabelsDialog(bdv.getBdvHandle(), (List)sources);
+
         return null;
+    }
+
+    private static <T extends NumericType<T> & NativeType<T>> void initExtractLabelsDialog(
+            final BdvHandle bdvHandle,
+            final List<Source<T>> sources) {
+
+        final TriggerBehaviourBindings bindings = bdvHandle.getTriggerbindings();
+        final InputTriggerConfig config = new InputTriggerConfig();
+
+        final ExtractLabelsDialog extractLabelsDialog = new ExtractLabelsDialog(
+                bdvHandle.getViewerPanel(),
+                sources,
+                config,
+                bdvHandle.getKeybindings(),
+                config);
+
+        bindings.addBehaviourMap( "crop", extractLabelsDialog.getBehaviourMap() );
+        bindings.addInputTriggerMap( "crop", extractLabelsDialog.getInputTriggerMap() );
     }
 
     private static final double[] rs = new double[]{1, 1, 0, 0, 0, 1, 1};
