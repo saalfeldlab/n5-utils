@@ -119,49 +119,36 @@
  */
 package org.janelia.saalfeldlab;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.concurrent.Callable;
-
-import org.janelia.saalfeldlab.N5Factory.N5Options;
-import org.janelia.saalfeldlab.n5.N5FSReader;
-import org.janelia.saalfeldlab.n5.N5Reader;
-import org.janelia.saalfeldlab.n5.N5Reader.Version;
-import org.janelia.saalfeldlab.n5.imglib2.N5Utils;
-
-import bdv.util.AxisOrder;
-import bdv.util.Bdv;
-import bdv.util.BdvFunctions;
-import bdv.util.BdvOptions;
-import bdv.util.BdvStackSource;
-import bdv.util.RandomAccessibleIntervalMipmapSource;
+import bdv.util.*;
 import bdv.util.volatiles.SharedQueue;
 import bdv.util.volatiles.VolatileViews;
 import mpicbg.spim.data.sequence.FinalVoxelDimensions;
-import net.imglib2.RandomAccessible;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.cache.volatiles.CacheHints;
 import net.imglib2.cache.volatiles.LoadingStrategy;
 import net.imglib2.converter.Converter;
 import net.imglib2.converter.Converters;
 import net.imglib2.realtransform.AffineTransform3D;
-import net.imglib2.transform.integer.MixedTransform;
 import net.imglib2.type.NativeType;
 import net.imglib2.type.numeric.ARGBType;
 import net.imglib2.type.volatiles.AbstractVolatileNativeRealType;
 import net.imglib2.type.volatiles.VolatileDoubleType;
 import net.imglib2.util.Pair;
 import net.imglib2.util.ValuePair;
-import net.imglib2.view.IntervalView;
-import net.imglib2.view.MixedTransformView;
-import net.imglib2.view.Views;
+import org.janelia.saalfeldlab.N5Factory.N5Options;
+import org.janelia.saalfeldlab.n5.N5FSReader;
+import org.janelia.saalfeldlab.n5.N5Reader;
+import org.janelia.saalfeldlab.n5.N5Reader.Version;
+import org.janelia.saalfeldlab.n5.imglib2.N5Utils;
 import picocli.CommandLine;
 import picocli.CommandLine.Option;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.Arrays;
+import java.util.concurrent.Callable;
 
 /**
  *
@@ -174,7 +161,7 @@ public class ViewCosem implements Callable<Void> {
     private String containerPath = null;
 
     @Option(names = {"-r", "--raw"}, required = false, description = "path to raw data")
-    private String rawData = null;
+    private String rawDataPath = null;
 
     @Option(names = {"-t", "--threads"}, description = "number of rendering threads, e.g. -t 4 (default 3)")
     private int numRenderingThreads = 3;
@@ -233,51 +220,98 @@ public class ViewCosem implements Callable<Void> {
         options.numRenderingThreads(numRenderingThreads);
         options.screenScales(screenScales);
 
+        // add raw data
+        if (rawDataPath != null && !rawDataPath.isEmpty()) {
+            final Pair<String, String> rawDataN5AndGroup = pathToN5ContainerAndGroup(rawDataPath);
+            if (rawDataN5AndGroup == null)
+                throw new IllegalArgumentException("cannot extract N5 container and dataset path from raw data parameter");
+            final N5Reader n5 = N5Factory.createN5Reader(new N5Options(rawDataN5AndGroup.getA(), new int[] {64}, null));
+            final String rawDataGroup = rawDataN5AndGroup.getB();
+            final double[] resolution = n5.getAttribute(rawDataGroup, "resolution", double[].class);
+
+            @SuppressWarnings("rawtypes")
+            final Pair<RandomAccessibleInterval<NativeType>[], double[][]> n5Sources;
+            if (n5.datasetExists(rawDataN5AndGroup.getB())) {
+                // this works for javac openjdk 8
+                @SuppressWarnings({"rawtypes"})
+                final RandomAccessibleInterval<NativeType> source = (RandomAccessibleInterval)N5Utils.openVolatile(n5, rawDataGroup);
+                n5Sources = new ValuePair<>(new RandomAccessibleInterval[] {source}, new double[][]{{1, 1, 1}});
+            } else {
+                n5Sources = N5Utils.openMipmaps(n5, rawDataGroup, true);
+            }
+
+            /* make volatile */
+            @SuppressWarnings("rawtypes")
+            final RandomAccessibleInterval<NativeType>[] ras = n5Sources.getA();
+            @SuppressWarnings("rawtypes")
+            final RandomAccessibleInterval[] vras = new RandomAccessibleInterval[ras.length];
+            Arrays.setAll(vras, k ->
+                    VolatileViews.wrapAsVolatile(
+                            n5Sources.getA()[k],
+                            queue,
+                            new CacheHints(LoadingStrategy.VOLATILE, 0, true)));
+
+            final int[] con = {0, 255};
+            final RandomAccessibleInterval<VolatileDoubleType>[] convertedSources = new RandomAccessibleInterval[n5Sources.getA().length];
+            for (int k = 0; k < vras.length; ++k) {
+                final Converter<AbstractVolatileNativeRealType<?, ?>, VolatileDoubleType> converter = (a, b) -> {
+                        b.setValid(a.isValid());
+                        if (b.isValid()) {
+                            double v = a.get().getRealDouble();
+                            v -= con[0];
+                            v /= con[1] - con[0];
+                            v *= 1000;
+                            b.setReal(v);
+                        }
+                    };
+                convertedSources[k] = Converters.convert(
+                        (RandomAccessibleInterval<AbstractVolatileNativeRealType<?, ?>>)vras[k],
+                        converter,
+                        new VolatileDoubleType());
+                final double[] scale = n5Sources.getB()[k];
+                Arrays.setAll(scale, d -> scale[d] * resolution[d]);
+            }
+
+            final AffineTransform3D affineTransform3D = new AffineTransform3D();
+            final RandomAccessibleIntervalMipmapSource<VolatileDoubleType> mipmapSource = new RandomAccessibleIntervalMipmapSource<>(
+                            convertedSources,
+                            new VolatileDoubleType(),
+                            n5Sources.getB(),
+                            new FinalVoxelDimensions("nm", resolution),
+                            affineTransform3D,
+                            "raw");
+
+            bdv = BdvFunctions.show(
+                    mipmapSource,
+                    bdv == null ? options : options.addTo(bdv));
+            bdv.setDisplayRange(0, 1000);
+            bdv.setColor(new ARGBType(0xffffffff));
+        }
+
+        // add labels
         final N5Reader n5 = N5Factory.createN5Reader(new N5Options(containerPath, new int[] {64}, null));
         final String[] datasets = n5.list("");
-        int labelId = 0;
-        boolean isLabel = true;
+        int id = 1;
+
         for (final String dataset : datasets) {
             System.out.println("Opening dataset /" + dataset);
             final double[] resolution = n5.getAttribute(dataset, "resolution", double[].class);
             final RandomAccessibleInterval<NativeType> source = (RandomAccessibleInterval)N5Utils.openVolatile(n5, dataset);
-//                n = source.numDimensions();
-//                final double[] scale = new double[n];
-//                Arrays.fill(scale, 1);
-//                n5Sources = new ValuePair<>(new RandomAccessibleInterval[] {source}, new double[][]{scale});
 
             final RandomAccessibleInterval volatileSource = VolatileViews.wrapAsVolatile(
                             source,
                             queue,
                             new CacheHints(LoadingStrategy.VOLATILE, 0, true));
 
-            final Converter<AbstractVolatileNativeRealType<?, ?>, VolatileDoubleType> converter;
-
-            if (isLabel) {
-                final int idHash = hash(labelId);
-                converter = (a, b) -> {
-                    b.setValid(a.isValid());
-                    if (b.isValid()) {
-                        final int x = hash(Double.hashCode(a.get().getRealDouble()) ^ idHash);
-                        final double v = ((double) x / Integer.MAX_VALUE + 1) * 500.0;
-                        b.setReal(v);
-                    }
-                };
-            }
-            else
-                converter = null;
-//            } else {
-//                converter = (a, b) -> {
-//                    b.setValid(a.isValid());
-//                    if (b.isValid()) {
-//                        double v = a.get().getRealDouble();
-//                        v -= con[0];
-//                        v /= con[1] - con[0];
-//                        v *= 1000;
-//                        b.setReal(v);
-//                    }
-//                };
-//            }
+            final int idHash = hash(id);
+            final Converter<AbstractVolatileNativeRealType<?, ?>, VolatileDoubleType> converter = (a, b) -> {
+                b.setValid(a.isValid());
+                if (b.isValid()) {
+                    final int x = hash(Double.hashCode(a.get().getRealDouble()) ^ idHash);
+                    final double v = ((double) x / Integer.MAX_VALUE + 1) * 500.0;
+                    b.setReal(v);
+                }
+            };
 
             final RandomAccessibleInterval<VolatileDoubleType> convertedSource = Converters.convert(
                     volatileSource,
@@ -285,24 +319,20 @@ public class ViewCosem implements Callable<Void> {
                     new VolatileDoubleType());
 
             final AffineTransform3D sourceTransform = new AffineTransform3D();
-            final RandomAccessibleIntervalMipmapSource<VolatileDoubleType> mipmapSource =
-                    new RandomAccessibleIntervalMipmapSource<>(
-                            new RandomAccessibleInterval[] {convertedSource},
-                            new VolatileDoubleType(),
-                            new double[][] {{1, 1, 1}},
-                            new FinalVoxelDimensions("nm", resolution),
-                            sourceTransform,
-                            dataset);
+            final RandomAccessibleIntervalMipmapSource<VolatileDoubleType> mipmapSource = new RandomAccessibleIntervalMipmapSource<>(
+                    new RandomAccessibleInterval[] {convertedSource},
+                    new VolatileDoubleType(),
+                    new double[][] {resolution.clone()},
+                    new FinalVoxelDimensions("nm", resolution),
+                    sourceTransform,
+                    dataset);
 
             bdv = BdvFunctions.show(
                     mipmapSource,
                     bdv == null ? options : options.addTo(bdv));
             bdv.setDisplayRange(0, 1000);
-            bdv.setColor(new ARGBType(argb(labelId++)));
+            bdv.setColor(new ARGBType(argb(id++)));
         }
-
-//            if (id == 1)
-//                bdv.setColor(new ARGBType(0xffffffff));
 
         return null;
     }
@@ -347,7 +377,7 @@ public class ViewCosem implements Callable<Void> {
 
     public static final void main(final String... args) {
 
-        CommandLine.call(new ViewCosem(), singlePathToArgs(args));
+        CommandLine.call(new ViewCosem(), args);
     }
 
     // hash code from https://stackoverflow.com/questions/664014/what-integer-hash-function-are-good-that-accepts-an-integer-hash-key
@@ -366,43 +396,33 @@ public class ViewCosem implements Callable<Void> {
             return n5.getAttribute(group + "/s0", "dimensions", long[].class).length;
     }
 
-    private static final String[] singlePathToArgs(final String... args) {
+    private static Pair<String, String> pathToN5ContainerAndGroup(final String pathStr) {
 
-        if (args.length == 1) {
-            final Path path = Paths.get(args[0]).toAbsolutePath();
-            if (
-                    Files.exists(path) &&
-                            Files.isDirectory(path)) {
-                for (int i = path.getNameCount(); i > 0; --i) {
-                    final Path subpath = path.subpath(0, i);
+        final Path path = Paths.get(pathStr).toAbsolutePath();
+        if (Files.exists(path) && Files.isDirectory(path)) {
+            for (int i = path.getNameCount(); i > 0; --i) {
+                final Path subpath = path.subpath(0, i);
+                try {
+                    final String n5Path = "/" + subpath.toString();
+                    final N5FSReader n5 = new N5FSReader(n5Path);
+                    Version version;
                     try {
-                        final String n5Path = "/" + subpath.toString();
-                        final N5FSReader n5 = new N5FSReader(n5Path);
-                        Version version;
-                        try {
-                            version = n5.getVersion();
-                        } catch (final IOException f) {
-                            f.printStackTrace(System.err);
-                            continue;
-                        }
-                        if (version != null && version.getMajor() > 0) {
-                            final String datasetPath = "/" + path.subpath(i, path.getNameCount()).toString();
-                            if (n5.exists(datasetPath)) {
-                                return new String[] {
-                                        "-i",
-                                        n5Path,
-                                        "-d",
-                                        datasetPath};
-                            }
-                        }
-                    } catch (final Exception e) {
-                        e.printStackTrace(System.err);
-                        return args;
+                        version = n5.getVersion();
+                    } catch (final IOException f) {
+                        f.printStackTrace(System.err);
+                        continue;
                     }
+                    if (version != null && version.getMajor() > 0) {
+                        final String datasetPath = "/" + path.subpath(i, path.getNameCount()).toString();
+                        if (n5.exists(datasetPath))
+                            return new ValuePair<>(n5Path, datasetPath);
+                    }
+                } catch (final Exception e) {
+                    e.printStackTrace(System.err);
+                    return null;
                 }
             }
-            return args;
-        } else
-            return args;
+        }
+        return null;
     }
 }
