@@ -2,6 +2,7 @@ package org.janelia.saalfeldlab;
 
 import bdv.viewer.Source;
 import bdv.viewer.ViewerPanel;
+import ij.IJ;
 import ij.ImagePlus;
 import ij.gui.GenericDialog;
 import net.imglib2.*;
@@ -17,6 +18,7 @@ import org.scijava.ui.behaviour.util.InputActionBindings;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
+import java.io.File;
 import java.util.List;
 import java.util.*;
 
@@ -27,7 +29,7 @@ public class ExtractLabelsDialog< T extends NumericType< T > & NativeType< T > >
     private final RealPoint lastClick = new RealPoint( 3 );
     private final List<Pair<String, Source<T>>> datasetsAndSources;
     private final String inputContainer;
-    private final String outputPath;
+    private String outputPath;
 
     static private int width = 1024;
     static private int height = 1024;
@@ -49,15 +51,12 @@ public class ExtractLabelsDialog< T extends NumericType< T > & NativeType< T > >
             final ViewerPanel viewer,
             final List<Pair<String, Source<T>>> datasetsAndSources,
             final String inputContainer,
-            final String outputPath,
             final InputTriggerConfig config,
-            final InputActionBindings inputActionBindings,
-            final KeyStrokeAdder.Factory keyProperties )
+            final InputActionBindings inputActionBindings )
     {
         this.viewer = viewer;
         this.datasetsAndSources = datasetsAndSources;
         this.inputContainer = inputContainer;
-        this.outputPath = outputPath;
 
         inputAdder = config.inputTriggerAdder( inputTriggerMap, "crop" );
 
@@ -140,16 +139,20 @@ public class ExtractLabelsDialog< T extends NumericType< T > & NativeType< T > >
             gd.addCheckboxGroup(numRows, numColumns, datasetLabels, new boolean[datasetLabels.length]);
 
 
-            final Button selectAllBtn = new Button("Select All"), selectNoneBtn = new Button("Select none");
             final Panel selectBtnPanel = new Panel();
+            final Button selectAllBtn = new Button("Select All"), selectNoneBtn = new Button("Select none");
             selectBtnPanel.add(selectAllBtn);
             selectBtnPanel.add(selectNoneBtn);
             gd.add(selectBtnPanel);
             gd.addPanel( new Panel() );
 
-            gd.addMessage("Output path: " + outputPath);
-//            gd.addNumericField( "scale_level : ", scaleLevel, 0 );
-//            gd.addCheckbox( "Single_4D_stack", single4DStack );
+            final Panel browseBtnPanel = new Panel();
+            final Button browseBtn = new Button("Browse");
+            final Label outputLabel = new Label("Output: " + outputPath);
+            browseBtnPanel.add(browseBtn);
+            browseBtnPanel.add(outputLabel);
+            gd.add(browseBtnPanel);
+            gd.addPanel( new Panel() );
 
             centerPointTextFields = new ArrayList<>();
             for ( int i = 0; i < 3; ++i )
@@ -157,15 +160,7 @@ public class ExtractLabelsDialog< T extends NumericType< T > & NativeType< T > >
 
             final Checkbox centerPointCheckbox = ( Checkbox ) gd.getCheckboxes().get( 0 );
             centerPointCheckbox.addItemListener(
-                    new ItemListener()
-                    {
-                        @Override
-                        public void itemStateChanged( final ItemEvent e )
-                        {
-                            setCenterPointTextFieldsEnabled( e.getStateChange() == ItemEvent.SELECTED );
-                        }
-                    }
-            );
+                    e -> setCenterPointTextFieldsEnabled( e.getStateChange() == ItemEvent.SELECTED ) );
 
             gd.addComponentListener( new ComponentAdapter()
                                      {
@@ -174,9 +169,7 @@ public class ExtractLabelsDialog< T extends NumericType< T > & NativeType< T > >
                                          {
                                              setCenterPointTextFieldsEnabled( false );
                                          }
-                                     }
-            );
-
+                                     } );
 
 
             // add 'select all' and 'select none' listeners
@@ -184,34 +177,39 @@ public class ExtractLabelsDialog< T extends NumericType< T > & NativeType< T > >
             for (int i = 0; i < datasetLabels.length; ++i)
                 datasetCheckboxes.add( (Checkbox) gd.getCheckboxes().get( i + 1 ) );
             selectAllBtn.addActionListener(
-                    new ActionListener()
-                    {
-                        @Override
-                        public void actionPerformed( final ActionEvent e )
-                        {
-                            for ( final Checkbox c : datasetCheckboxes)
-                                c.setState(true);
-                        }
-                    }
-            );
+                    e -> {
+                        for ( final Checkbox c : datasetCheckboxes)
+                            c.setState(true);
+                    } );
 
             selectNoneBtn.addActionListener(
-                    new ActionListener()
-                    {
-                        @Override
-                        public void actionPerformed( final ActionEvent e )
-                        {
-                            for ( final Checkbox c : datasetCheckboxes)
-                                c.setState(false);
-                        }
-                    }
-            );
+                    e -> {
+                        for ( final Checkbox c : datasetCheckboxes)
+                            c.setState(false);
+                    } );
 
+
+            // add browse handler
+            browseBtn.addActionListener(
+                    e -> {
+                        File directory = !outputPath.isEmpty() ? new File( outputPath ) : null;
+                        final JFileChooser directoryChooser = new JFileChooser( directory );
+                        directoryChooser.setFileSelectionMode( JFileChooser.DIRECTORIES_ONLY );
+                        if ( directoryChooser.showOpenDialog( gd ) ==  JFileChooser.APPROVE_OPTION ) {
+                            outputPath = directoryChooser.getSelectedFile().getAbsolutePath();
+                            outputLabel.setText("Output: " + outputPath);
+                        }
+                    } );
 
             gd.showDialog();
 
             if ( gd.wasCanceled() )
                 return;
+
+            if ( outputPath.isEmpty() ) {
+                IJ.showMessage("Please select output path.");
+                return;
+            }
 
             final boolean customCenterPoint = gd.getNextBoolean();
             for ( int i = 0; i < 3; ++i )

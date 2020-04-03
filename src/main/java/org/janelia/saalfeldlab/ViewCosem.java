@@ -139,7 +139,6 @@ import net.imglib2.type.numeric.NumericType;
 import net.imglib2.type.volatiles.AbstractVolatileNativeRealType;
 import net.imglib2.type.volatiles.VolatileDoubleType;
 import net.imglib2.util.Pair;
-import net.imglib2.util.Util;
 import net.imglib2.util.ValuePair;
 import org.janelia.saalfeldlab.N5Factory.N5Options;
 import org.janelia.saalfeldlab.n5.N5FSReader;
@@ -173,53 +172,11 @@ public class ViewCosem<T extends NativeType<T> & NumericType<T>>  implements Cal
     @Option(names = {"-r", "--raw"}, required = false, description = "path to raw data")
     private String rawDataPath = null;
 
-    @Option(names = {"-o", "--output"}, required = true, description = "output container path")
-    private String outputPath = null;
-
     @Option(names = {"-t", "--threads"}, description = "number of rendering threads, e.g. -t 4 (default 3)")
     private int numRenderingThreads = 3;
 
     @Option(names = {"-s", "--scales"}, split = ",", description = "comma separated list of screen scales, e.g. -s 1.0,0.5,0.25 (default 1.0,0.75,0.5,0.25,0.125)")
     private double[] screenScales = new double[] {1.0, 0.5, 0.25, 0.125};
-
-    private static final boolean parseCSDoubleArray(final String csv, final double[] array) {
-
-        final String[] stringValues = csv.split(",\\s*");
-        try {
-            final int n = Math.min(array.length, stringValues.length);
-            for (int i = 0; i < n; ++i)
-                array[i] = Double.parseDouble(stringValues[i]);
-        } catch (final NumberFormatException e) {
-            e.printStackTrace(System.err);
-            return false;
-        }
-        return true;
-    }
-
-    private static final int[] parseCSIntArray(final String csv) {
-
-        try {
-            final String[] stringValues = csv.split(",\\s*");
-            final int[] array = new int[stringValues.length];
-            for (int i = 0; i < array.length; ++i)
-                array[i] = Integer.parseInt(stringValues[i]);
-            return array;
-        } catch (final Exception e) {
-            e.printStackTrace(System.err);
-            return null;
-        }
-    }
-
-    private static final double[] parseContrastRange(final String csv) {
-
-        if (csv.toLowerCase().startsWith("label"))
-            return null;
-        else {
-            final double[] array = new double[]{0, 255};
-            parseCSDoubleArray(csv, array);
-            return array;
-        }
-    }
 
     @SuppressWarnings("unchecked")
     @Override
@@ -353,15 +310,6 @@ public class ViewCosem<T extends NativeType<T> & NumericType<T>>  implements Cal
             bdv.setDisplayRange(0, 1000);
             bdv.setColor(new ARGBType(argb(id++)));
 
-//            final RandomAccessibleIntervalMipmapSource<T> nonVolatileMipmapSource = new RandomAccessibleIntervalMipmapSource<>(
-//                    new RandomAccessibleInterval[] {source},
-//                    Util.getTypeFromInterval(source),
-//                    new double[][] {{1, 1, 1}},
-//                    new FinalVoxelDimensions("nm", resolution),
-//                    sourceTransform,
-//                    dataset);
-//            nonVolatileSources.add(nonVolatileMipmapSource);
-
             datasetsAndSources.add(new ValuePair<>(dataset, mipmapSource));
         }
 
@@ -378,7 +326,7 @@ public class ViewCosem<T extends NativeType<T> & NumericType<T>>  implements Cal
         minMaxGroups.get(0).setRange(0, 5000);
 
         // init extract labels dialog
-        initExtractLabelsDialog(bdv.getBdvHandle(), datasetsAndSources, containerPath, outputPath);
+        initExtractLabelsDialog(bdv.getBdvHandle(), datasetsAndSources, containerPath);
 
         return null;
     }
@@ -386,8 +334,7 @@ public class ViewCosem<T extends NativeType<T> & NumericType<T>>  implements Cal
     private static <T extends NumericType<T> & NativeType<T>> void initExtractLabelsDialog(
             final BdvHandle bdvHandle,
             final List<Pair<String, Source<T>>> datasetsAndSources,
-            final String inputContainer,
-            final String outputPath) {
+            final String inputContainer) {
 
         final TriggerBehaviourBindings bindings = bdvHandle.getTriggerbindings();
         final InputTriggerConfig config = new InputTriggerConfig();
@@ -396,10 +343,8 @@ public class ViewCosem<T extends NativeType<T> & NumericType<T>>  implements Cal
                 bdvHandle.getViewerPanel(),
                 datasetsAndSources,
                 inputContainer,
-                outputPath,
                 config,
-                bdvHandle.getKeybindings(),
-                config);
+                bdvHandle.getKeybindings());
 
         bindings.addBehaviourMap( "crop", extractLabelsDialog.getBehaviourMap() );
         bindings.addInputTriggerMap( "crop", extractLabelsDialog.getInputTriggerMap() );
