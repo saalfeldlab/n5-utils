@@ -18,10 +18,7 @@ import org.scijava.ui.behaviour.util.InputActionBindings;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ComponentAdapter;
-import java.awt.event.ComponentEvent;
-import java.awt.event.ItemEvent;
-import java.awt.event.ItemListener;
+import java.awt.event.*;
 import java.util.List;
 import java.util.*;
 
@@ -137,11 +134,19 @@ public class ExtractLabelsDialog< T extends NumericType< T > & NativeType< T > >
             gd.addNumericField( "threshold : ", threshold, 0, 5, "" );
             gd.addNumericField( "block size: ", blockSize, 0, 5, "" );
 
+            gd.addPanel( new Panel() );
             final String[] datasetLabels = new String[datasetsAndSources.size()];
             Arrays.setAll(datasetLabels, i -> datasetsAndSources.get(i).getA());
             int numColumns = 3;
             int numRows = (datasetLabels.length / numColumns) + (datasetLabels.length % numColumns == 0 ? 0 : 1);
             gd.addCheckboxGroup(numRows, numColumns, datasetLabels, new boolean[datasetLabels.length]);
+
+
+            final Button selectAllBtn = new Button("Select All"), selectNoneBtn = new Button("Select none");
+            final Panel selectBtnPanel = new Panel();
+            selectBtnPanel.add(selectAllBtn);
+            selectBtnPanel.add(selectNoneBtn);
+            gd.add(selectBtnPanel);
 
             gd.addMessage("Output path: " + outputPath);
 //            gd.addNumericField( "scale_level : ", scaleLevel, 0 );
@@ -172,6 +177,37 @@ public class ExtractLabelsDialog< T extends NumericType< T > & NativeType< T > >
                                          }
                                      }
             );
+
+
+
+            // add 'select all' and 'select none' listeners
+            final List<Checkbox> datasetCheckboxes = new ArrayList<>();
+            for (int i = 0; i < datasetLabels.length; ++i)
+                datasetCheckboxes.add( (Checkbox) gd.getCheckboxes().get( i + 1 ) );
+            selectAllBtn.addActionListener(
+                    new ActionListener()
+                    {
+                        @Override
+                        public void actionPerformed( final ActionEvent e )
+                        {
+                            for ( final Checkbox c : datasetCheckboxes)
+                                c.setState(true);
+                        }
+                    }
+            );
+
+            selectNoneBtn.addActionListener(
+                    new ActionListener()
+                    {
+                        @Override
+                        public void actionPerformed( final ActionEvent e )
+                        {
+                            for ( final Checkbox c : datasetCheckboxes)
+                                c.setState(false);
+                        }
+                    }
+            );
+
 
             gd.showDialog();
 
@@ -221,8 +257,15 @@ public class ExtractLabelsDialog< T extends NumericType< T > & NativeType< T > >
             final int[] blockSizeArr = new int[3];
             Arrays.fill(blockSizeArr, blockSize);
 
+            final List<String> datasetsToExtract = new ArrayList<>();
+            for (int i = 0; i < datasetLabels.length; ++i)
+                if ( datasetCheckboxes.get(i).getState())
+                    datasetsToExtract.add(datasetLabels[i]);
+
             try {
-                System.out.println("Extracting labels in interval min=" + Arrays.toString(min) + ", max=" + Arrays.toString(max) + " to " + outputPath);
+                System.out.println("Extracting the following classes in interval min=" + Arrays.toString(min) + ", max=" + Arrays.toString(max) + " to " + outputPath + ":");
+                for (final String d : datasetsToExtract)
+                    System.out.println("  " + d);
 
                 ExtractLabels.extractLabels(
                         inputContainer,
@@ -230,7 +273,7 @@ public class ExtractLabelsDialog< T extends NumericType< T > & NativeType< T > >
                         outputPath,
                         OptionalDouble.of(scaling),
                         OptionalDouble.of(threshold),
-                        Optional.empty(),
+                        Optional.of(datasetsToExtract),
                         Optional.of(blockSizeArr));
 
                 System.out.println("Done!");
