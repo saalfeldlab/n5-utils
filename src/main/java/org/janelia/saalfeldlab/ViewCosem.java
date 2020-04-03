@@ -284,17 +284,17 @@ public class ViewCosem<T extends NativeType<T> & NumericType<T>>  implements Cal
                         (RandomAccessibleInterval<AbstractVolatileNativeRealType<?, ?>>)vras[k],
                         converter,
                         new VolatileDoubleType());
-                final double[] scale = n5Sources.getB()[k];
-                Arrays.setAll(scale, d -> scale[d] * resolution[d]);
             }
 
-            final AffineTransform3D affineTransform3D = new AffineTransform3D();
+            final AffineTransform3D sourceTransform = new AffineTransform3D();
+            sourceTransform.scale(resolution[0], resolution[1], resolution[2]);
+
             final RandomAccessibleIntervalMipmapSource<VolatileDoubleType> mipmapSource = new RandomAccessibleIntervalMipmapSource<>(
                             convertedSources,
                             new VolatileDoubleType(),
                             n5Sources.getB(),
                             new FinalVoxelDimensions("nm", resolution),
-                            affineTransform3D,
+                            sourceTransform,
                             "raw");
 
             bdv = BdvFunctions.show(
@@ -337,10 +337,12 @@ public class ViewCosem<T extends NativeType<T> & NumericType<T>>  implements Cal
                     new VolatileDoubleType());
 
             final AffineTransform3D sourceTransform = new AffineTransform3D();
+            sourceTransform.scale(resolution[0], resolution[1], resolution[2]);
+
             final RandomAccessibleIntervalMipmapSource<VolatileDoubleType> mipmapSource = new RandomAccessibleIntervalMipmapSource<>(
                     new RandomAccessibleInterval[] {convertedSource},
                     new VolatileDoubleType(),
-                    new double[][] {resolution.clone()},
+                    new double[][] {{1, 1, 1}},
                     new FinalVoxelDimensions("nm", resolution),
                     sourceTransform,
                     dataset);
@@ -354,7 +356,7 @@ public class ViewCosem<T extends NativeType<T> & NumericType<T>>  implements Cal
             final RandomAccessibleIntervalMipmapSource<T> nonVolatileMipmapSource = new RandomAccessibleIntervalMipmapSource<>(
                     new RandomAccessibleInterval[] {source},
                     Util.getTypeFromInterval(source),
-                    new double[][] {resolution.clone()},
+                    new double[][] {{1, 1, 1}},
                     new FinalVoxelDimensions("nm", resolution),
                     sourceTransform,
                     dataset);
