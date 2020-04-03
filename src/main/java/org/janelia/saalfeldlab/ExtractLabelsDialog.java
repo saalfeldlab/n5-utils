@@ -147,6 +147,7 @@ public class ExtractLabelsDialog< T extends NumericType< T > & NativeType< T > >
             selectBtnPanel.add(selectAllBtn);
             selectBtnPanel.add(selectNoneBtn);
             gd.add(selectBtnPanel);
+            gd.addPanel( new Panel() );
 
             gd.addMessage("Output path: " + outputPath);
 //            gd.addNumericField( "scale_level : ", scaleLevel, 0 );
