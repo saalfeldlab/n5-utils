@@ -4,13 +4,11 @@ import bdv.viewer.Source;
 import bdv.viewer.ViewerPanel;
 import ij.ImagePlus;
 import ij.gui.GenericDialog;
-import net.imglib2.FinalInterval;
-import net.imglib2.Interval;
-import net.imglib2.RandomAccessibleInterval;
-import net.imglib2.RealPoint;
+import net.imglib2.*;
 import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.type.NativeType;
 import net.imglib2.type.numeric.NumericType;
+import net.imglib2.util.Intervals;
 import net.imglib2.util.Pair;
 import org.scijava.ui.behaviour.*;
 import org.scijava.ui.behaviour.io.InputTriggerConfig;
@@ -225,35 +223,26 @@ public class ExtractLabelsDialog< T extends NumericType< T > & NativeType< T > >
             scaling = (int)gd.getNextNumber();
             threshold = (int)gd.getNextNumber();
             blockSize = (int)gd.getNextNumber();
-//            scaleLevel = ( int )gd.getNextNumber();
-//            single4DStack = gd.getNextBoolean();
 
-//            final int s = scaleLevel;
-            final int scaleLevel = 0;
-            final int timepoint = 1;
-
-            final String centerPosStr = Arrays.toString( centerPoint );
             if ( customCenterPoint )
                 lastClick.setPosition( centerPoint );
 
-//                if ( s < 0 || s >= source.getNumMipmapLevels() )
-//                {
-//                    IJ.log( String.format( "Specified incorrect scale level %d. Valid range is [%d, %d]", s, 0, source.getNumMipmapLevels() - 1 ) );
-//                    scaleLevel = source.getNumMipmapLevels() - 1;
-//                    return;
-//                }
+            final long[] size = new long[] { width, height, depth };
+            final long[] worldMin = new long[3], worldMax = new long[3];
+            Arrays.setAll(worldMin, d -> Math.round( centerPoint[d] - 0.5 * size[d] ) );
+            Arrays.setAll(worldMax, d -> worldMin[d] + size[d] - 1);
 
             final AffineTransform3D transform = new AffineTransform3D();
+            final int scaleLevel = 0;
+            final int timepoint = 1;
             datasetsAndSources.get( 0 ).getB().getSourceTransform( timepoint, scaleLevel, transform );
 
-            final RealPoint center = new RealPoint( 3 );
-            transform.applyInverse( center, lastClick );
-
-            final long[] size = new long[] { width, height, depth };
-            final long[] min = new long[3], max = new long[3];
-            Arrays.setAll(min, d -> Math.round( center.getDoublePosition(d) - 0.5 * size[d] ) );
-            Arrays.setAll(max, d -> min[d] + size[d] - 1);
-            final Interval cropInterval = new FinalInterval(min, max);
+            final double[] sourceMin = new double[3], sourceMax = new double[3];
+            Arrays.setAll(sourceMin, d -> worldMin[d]);
+            Arrays.setAll(sourceMax, d -> worldMax[d]);
+            transform.applyInverse(sourceMin, sourceMin);
+            transform.applyInverse(sourceMax, sourceMax);
+            final Interval cropInterval = Intervals.smallestContainingInterval(new FinalRealInterval(sourceMin, sourceMax));
 
             final int[] blockSizeArr = new int[3];
             Arrays.fill(blockSizeArr, blockSize);
@@ -264,7 +253,7 @@ public class ExtractLabelsDialog< T extends NumericType< T > & NativeType< T > >
                     datasetsToExtract.add(datasetLabels[i]);
 
             try {
-                System.out.println("Extracting the following classes in interval min=" + Arrays.toString(min) + ", max=" + Arrays.toString(max) + " to " + outputPath + ":");
+                System.out.println("Extracting the following classes in world interval [min=" + Arrays.toString(worldMin) + ", max=" + Arrays.toString(worldMax) + "] to " + outputPath + ":");
                 for (final String d : datasetsToExtract)
                     System.out.println("  " + d);
 
