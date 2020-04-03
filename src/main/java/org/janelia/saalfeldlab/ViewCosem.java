@@ -119,6 +119,9 @@
  */
 package org.janelia.saalfeldlab;
 
+import bdv.tools.brightness.ConverterSetup;
+import bdv.tools.brightness.MinMaxGroup;
+import bdv.tools.brightness.SetupAssignments;
 import bdv.util.*;
 import bdv.util.volatiles.SharedQueue;
 import bdv.util.volatiles.VolatileViews;
@@ -357,6 +360,18 @@ public class ViewCosem<T extends NativeType<T> & NumericType<T>>  implements Cal
                     dataset);
             nonVolatileSources.add(nonVolatileMipmapSource);
         }
+
+        // move all label sources into one group
+        final SetupAssignments setupAssignments = bdv.getBdvHandle().getSetupAssignments();
+        final List<ConverterSetup> converterSetups = setupAssignments.getConverterSetups();
+        final List<MinMaxGroup> minMaxGroups = new ArrayList<>(setupAssignments.getMinMaxGroups());
+        final int firstLabelSourceIndex = rawDataPath != null && !rawDataPath.isEmpty() ? 1 : 0;
+        for (int i = firstLabelSourceIndex; i < minMaxGroups.size(); ++i)
+            setupAssignments.moveSetupToGroup(converterSetups.get(i), minMaxGroups.get(minMaxGroups.size() - 1));
+
+        // set display ranges
+        minMaxGroups.get(minMaxGroups.size() - 1).setRange(0, 7000);
+        minMaxGroups.get(0).setRange(0, 5000);
 
         // init extract labels dialog
         initExtractLabelsDialog(bdv.getBdvHandle(), nonVolatileSources, containerPath, outputPath);
