@@ -309,7 +309,7 @@ public class ViewCosem<T extends NativeType<T> & NumericType<T>>  implements Cal
         final String[] datasets = n5.list("");
 
         int id = 1;
-        final List<Source<T>> nonVolatileSources = new ArrayList<>();
+        final List<Pair<String, Source<VolatileDoubleType>>> datasetsAndSources = new ArrayList<>();
 
         for (final String dataset : datasets) {
             System.out.println("Opening dataset /" + dataset);
@@ -353,14 +353,16 @@ public class ViewCosem<T extends NativeType<T> & NumericType<T>>  implements Cal
             bdv.setDisplayRange(0, 1000);
             bdv.setColor(new ARGBType(argb(id++)));
 
-            final RandomAccessibleIntervalMipmapSource<T> nonVolatileMipmapSource = new RandomAccessibleIntervalMipmapSource<>(
-                    new RandomAccessibleInterval[] {source},
-                    Util.getTypeFromInterval(source),
-                    new double[][] {{1, 1, 1}},
-                    new FinalVoxelDimensions("nm", resolution),
-                    sourceTransform,
-                    dataset);
-            nonVolatileSources.add(nonVolatileMipmapSource);
+//            final RandomAccessibleIntervalMipmapSource<T> nonVolatileMipmapSource = new RandomAccessibleIntervalMipmapSource<>(
+//                    new RandomAccessibleInterval[] {source},
+//                    Util.getTypeFromInterval(source),
+//                    new double[][] {{1, 1, 1}},
+//                    new FinalVoxelDimensions("nm", resolution),
+//                    sourceTransform,
+//                    dataset);
+//            nonVolatileSources.add(nonVolatileMipmapSource);
+
+            datasetsAndSources.add(new ValuePair<>(dataset, mipmapSource));
         }
 
         // move all label sources into one group
@@ -376,14 +378,14 @@ public class ViewCosem<T extends NativeType<T> & NumericType<T>>  implements Cal
         minMaxGroups.get(0).setRange(0, 5000);
 
         // init extract labels dialog
-        initExtractLabelsDialog(bdv.getBdvHandle(), nonVolatileSources, containerPath, outputPath);
+        initExtractLabelsDialog(bdv.getBdvHandle(), datasetsAndSources, containerPath, outputPath);
 
         return null;
     }
 
     private static <T extends NumericType<T> & NativeType<T>> void initExtractLabelsDialog(
             final BdvHandle bdvHandle,
-            final List<Source<T>> sources,
+            final List<Pair<String, Source<T>>> datasetsAndSources,
             final String inputContainer,
             final String outputPath) {
 
@@ -392,7 +394,7 @@ public class ViewCosem<T extends NativeType<T> & NumericType<T>>  implements Cal
 
         final ExtractLabelsDialog extractLabelsDialog = new ExtractLabelsDialog(
                 bdvHandle.getViewerPanel(),
-                sources,
+                datasetsAndSources,
                 inputContainer,
                 outputPath,
                 config,

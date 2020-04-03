@@ -11,6 +11,7 @@ import net.imglib2.RealPoint;
 import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.type.NativeType;
 import net.imglib2.type.numeric.NumericType;
+import net.imglib2.util.Pair;
 import org.scijava.ui.behaviour.*;
 import org.scijava.ui.behaviour.io.InputTriggerConfig;
 import org.scijava.ui.behaviour.util.InputActionBindings;
@@ -28,8 +29,8 @@ public class ExtractLabelsDialog< T extends NumericType< T > & NativeType< T > >
 {
     final protected ViewerPanel viewer;
 
-    private RealPoint lastClick = new RealPoint( 3 );
-    private List< Source< T > > sources;
+    private final RealPoint lastClick = new RealPoint( 3 );
+    private final List<Pair<String, Source<T>>> datasetsAndSources;
     private final String inputContainer;
     private final String outputPath;
 
@@ -51,7 +52,7 @@ public class ExtractLabelsDialog< T extends NumericType< T > & NativeType< T > >
 
     public ExtractLabelsDialog(
             final ViewerPanel viewer,
-            final List< Source< T > > sources,
+            final List<Pair<String, Source<T>>> datasetsAndSources,
             final String inputContainer,
             final String outputPath,
             final InputTriggerConfig config,
@@ -59,7 +60,7 @@ public class ExtractLabelsDialog< T extends NumericType< T > & NativeType< T > >
             final KeyStrokeAdder.Factory keyProperties )
     {
         this.viewer = viewer;
-        this.sources = sources;
+        this.datasetsAndSources = datasetsAndSources;
         this.inputContainer = inputContainer;
         this.outputPath = outputPath;
 
@@ -135,6 +136,13 @@ public class ExtractLabelsDialog< T extends NumericType< T > & NativeType< T > >
             gd.addNumericField( "scaling : ", scaling, 0, 5, "" );
             gd.addNumericField( "threshold : ", threshold, 0, 5, "" );
             gd.addNumericField( "block size: ", blockSize, 0, 5, "" );
+
+            final String[] datasetLabels = new String[datasetsAndSources.size()];
+            Arrays.setAll(datasetLabels, i -> datasetsAndSources.get(i).getA());
+            int numColumns = 3;
+            int numRows = (datasetLabels.length / numColumns) + (datasetLabels.length % numColumns == 0 ? 0 : 1);
+            gd.addCheckboxGroup(numRows, numColumns, datasetLabels, new boolean[datasetLabels.length]);
+
             gd.addMessage("Output path: " + outputPath);
 //            gd.addNumericField( "scale_level : ", scaleLevel, 0 );
 //            gd.addCheckbox( "Single_4D_stack", single4DStack );
@@ -185,13 +193,11 @@ public class ExtractLabelsDialog< T extends NumericType< T > & NativeType< T > >
 
 //            final int s = scaleLevel;
             final int scaleLevel = 0;
+            final int timepoint = 1;
 
             final String centerPosStr = Arrays.toString( centerPoint );
             if ( customCenterPoint )
                 lastClick.setPosition( centerPoint );
-
-            final int timepoint = 1;
-            final Source< T > source = sources.get( 0 );
 
 //                if ( s < 0 || s >= source.getNumMipmapLevels() )
 //                {
@@ -200,9 +206,10 @@ public class ExtractLabelsDialog< T extends NumericType< T > & NativeType< T > >
 //                    return;
 //                }
 
-            final RealPoint center = new RealPoint( 3 );
             final AffineTransform3D transform = new AffineTransform3D();
-            source.getSourceTransform( timepoint, scaleLevel, transform );
+            datasetsAndSources.get( 0 ).getB().getSourceTransform( timepoint, scaleLevel, transform );
+
+            final RealPoint center = new RealPoint( 3 );
             transform.applyInverse( center, lastClick );
 
             final long[] size = new long[] { width, height, depth };
