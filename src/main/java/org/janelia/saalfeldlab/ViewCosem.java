@@ -325,6 +325,8 @@ public class ViewCosem<T extends NativeType<T> & NumericType<T>>  implements Cal
         minMaxGroups.get(minMaxGroups.size() - 1).setRange(0, 7000);
         minMaxGroups.get(0).setRange(0, 5000);
 
+        bdv.setDisplayRange(0, 10000);
+
         // init extract labels dialog
         initExtractLabelsDialog(bdv.getBdvHandle(), datasetsAndSources, containerPath);
 
