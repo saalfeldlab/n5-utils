@@ -87,8 +87,12 @@ public class ExtractLabels implements Callable<Void> {
             n5Writer.setAttribute(outputDatasetPath, "resolution", outputResolution);
 
             final double[] inputOffset = n5Reader.getAttribute(dataset, "offset", double[].class);
+            final double[] scaledCropMin = new double[3];
+            Arrays.setAll(scaledCropMin, d -> cropInterval.realMin(d) * outputResolution[d]);
+            final double[] inputScaledOffset = new double[3];
+            Arrays.setAll(inputScaledOffset, d -> (inputOffset != null ? inputOffset[d] : 0) * scaling);
             final double[] outputOffset = new double[3];
-            Arrays.setAll(outputOffset, d -> (inputOffset != null ? inputOffset[d] : 0) + cropInterval.realMin(d));
+            Arrays.setAll(outputOffset, d -> inputScaledOffset[d] + scaledCropMin[d]);
             n5Writer.setAttribute(outputDatasetPath, "offset", outputOffset);
         }
 
