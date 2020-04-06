@@ -2,10 +2,10 @@ package org.janelia.saalfeldlab;
 
 import bdv.viewer.Source;
 import bdv.viewer.ViewerPanel;
-import ij.IJ;
-import ij.ImagePlus;
 import ij.gui.GenericDialog;
-import net.imglib2.*;
+import net.imglib2.FinalRealInterval;
+import net.imglib2.Interval;
+import net.imglib2.RealPoint;
 import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.type.NativeType;
 import net.imglib2.type.numeric.NumericType;
@@ -17,7 +17,9 @@ import org.scijava.ui.behaviour.util.InputActionBindings;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.*;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
+import java.awt.event.ItemEvent;
 import java.io.File;
 import java.util.List;
 import java.util.*;
@@ -29,12 +31,12 @@ public class ExtractLabelsDialog< T extends NumericType< T > & NativeType< T > >
     private final RealPoint lastClick = new RealPoint( 3 );
     private final List<Pair<String, Source<T>>> datasetsAndSources;
     private final String inputContainer;
-    private String outputPath;
+    private String outputPath = "";
 
     static private int width = 1024;
     static private int height = 1024;
     static private int depth = 512;
-    static private int scaling = 2;
+    static private int scaling = 1;
     static private int threshold = 128;
     static private int blockSize = 128;
 
@@ -144,15 +146,11 @@ public class ExtractLabelsDialog< T extends NumericType< T > & NativeType< T > >
             selectBtnPanel.add(selectAllBtn);
             selectBtnPanel.add(selectNoneBtn);
             gd.add(selectBtnPanel);
-            gd.addPanel( new Panel() );
+            gd.addPanel(new Panel());
 
-            final Panel browseBtnPanel = new Panel();
             final Button browseBtn = new Button("Browse");
-            final Label outputLabel = new Label("Output: " + outputPath);
-            browseBtnPanel.add(browseBtn);
-            browseBtnPanel.add(outputLabel);
-            gd.add(browseBtnPanel);
-            gd.addPanel( new Panel() );
+            gd.add(browseBtn);
+            gd.addPanel(new Panel());
 
             centerPointTextFields = new ArrayList<>();
             for ( int i = 0; i < 3; ++i )
@@ -197,7 +195,6 @@ public class ExtractLabelsDialog< T extends NumericType< T > & NativeType< T > >
                         directoryChooser.setFileSelectionMode( JFileChooser.DIRECTORIES_ONLY );
                         if ( directoryChooser.showOpenDialog( gd ) ==  JFileChooser.APPROVE_OPTION ) {
                             outputPath = directoryChooser.getSelectedFile().getAbsolutePath();
-                            outputLabel.setText("Output: " + outputPath);
                         }
                     } );
 
@@ -207,7 +204,10 @@ public class ExtractLabelsDialog< T extends NumericType< T > & NativeType< T > >
                 return;
 
             if ( outputPath.isEmpty() ) {
-                IJ.showMessage("Please select output path.");
+                final GenericDialog message = new GenericDialog("");
+                message.addMessage("Please select output path.");
+                message.hideCancelButton();
+                message.showDialog();
                 return;
             }
 
@@ -269,43 +269,7 @@ public class ExtractLabelsDialog< T extends NumericType< T > & NativeType< T > >
                 e.printStackTrace();
             }
 
-//                final RandomAccessibleInterval< T > img = source.getSource( 0, s );
-//                final RandomAccessible< T > imgExtended = Views.extendZero( img );
-//                final IntervalView< T > crop = Views.offsetInterval( imgExtended, min, size );
-//
-//                channelsImages.add( crop );
-
-//                if ( !single4DStack )
-//                    show( crop, "channel " + channel + " " + centerPosStr );
-
-//            if ( single4DStack )
-//            {
-//                // FIXME: need to permute slices/channels. Swapping them in the resulting ImagePlus produces wrong output
-//                ImageJFunctions.show( Views.permute( Views.stack( channelsImages ), 2, 3 ), centerPosStr );
-//            }
-
             viewer.requestRepaint();
-        }
-
-        // Taken from ImageJFunctions. Modified to swap slices/channels for 3D image (by default they mistakenly are nSlices=1 and nChannels=depth)
-        // TODO: pull request with this fix if appropriate in general case?
-        private ImagePlus show( final RandomAccessibleInterval< T > img, final String title )
-        {
-//            final ImagePlus imp = ImageJFunctions.wrap( img, title );
-//            if ( null == imp ) { return null; }
-//
-//            // Make sure that nSlices>1 and nChannels=nFrames=1 for 3D image
-//            final int[] possible3rdDim = new int[] { imp.getNChannels(), imp.getNSlices(), imp.getNFrames() };
-//            Arrays.sort( possible3rdDim );
-//            if ( possible3rdDim[ 0 ] * possible3rdDim[ 1 ] == 1 )
-//                imp.setDimensions( 1, possible3rdDim[ 2 ], 1 );
-//
-//            imp.show();
-//            imp.getProcessor().resetMinAndMax();
-//            imp.updateAndRepaintWindow();
-//
-//            return imp;
-            return null;
         }
 
         private void setCenterPointTextFieldsEnabled( final boolean enabled )
