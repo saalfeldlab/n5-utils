@@ -159,6 +159,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.Callable;
 
 /**
@@ -225,6 +226,7 @@ public class ViewCosem<T extends NativeType<T> & NumericType<T>>  implements Cal
                 double[] resolutionArr = null;
                 try {
                     resolutionArr = n5.getAttribute(rawDataGroup, "resolution", double[].class);
+                    Objects.requireNonNull(resolutionArr);
                 } catch (final Throwable e) {
                     // try to read resolution attribute as voxel dimensions
                     final VoxelDimensions voxelDimensions = n5.getAttribute(rawDataGroup, "pixelResolution", FinalVoxelDimensions.class);
