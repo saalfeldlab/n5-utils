@@ -117,7 +117,7 @@
  *
  *
  */
-package org.saalfeldlab;
+package org.janelia.saalfeldlab;
 
 import java.io.IOException;
 import java.net.URI;
@@ -142,6 +142,8 @@ import org.janelia.saalfeldlab.n5.hdf5.N5HDF5Reader;
 import org.janelia.saalfeldlab.n5.hdf5.N5HDF5Writer;
 import org.janelia.saalfeldlab.n5.s3.N5AmazonS3Reader;
 import org.janelia.saalfeldlab.n5.s3.N5AmazonS3Writer;
+import org.janelia.saalfeldlab.n5.zarr.N5ZarrReader;
+import org.janelia.saalfeldlab.n5.zarr.N5ZarrWriter;
 
 import com.amazonaws.auth.profile.ProfileCredentialsProvider;
 import com.amazonaws.services.s3.AmazonS3;
@@ -200,6 +202,8 @@ public class N5Factory {
 		if (uri == null || uri.getScheme() == null) {
 			if (isHDF5(options.containerPath, accessType))
 				return (N5) createN5HDF5(options.containerPath, options.blockSize, accessType);
+			else if (isZarr(options.containerPath))
+				return (N5) createN5Zarr(options.containerPath, accessType);
 			else
 				return (N5) createN5FS(options.containerPath, accessType);
 		}
@@ -236,6 +240,8 @@ public class N5Factory {
 				final String parsedPath = Paths.get(uri).toString();
 				if (isHDF5(parsedPath, accessType))
 					return (N5) createN5HDF5(parsedPath, options.blockSize, accessType);
+				else if (isZarr(parsedPath))
+					return (N5) createN5Zarr(parsedPath, accessType);
 				else
 					return (N5) createN5FS(parsedPath, accessType);
 			case "s3":
@@ -274,6 +280,18 @@ public class N5Factory {
 		}
 	}
 
+	private static <N5 extends N5ZarrReader> N5 createN5Zarr(final String containerPath, final N5AccessType accessType) throws IOException {
+
+		switch (accessType) {
+		case Reader:
+			return (N5) new N5ZarrReader(containerPath, true);
+		case Writer:
+			return (N5) new N5ZarrWriter(containerPath, true);
+		default:
+			return null;
+		}
+	}
+
 	private static boolean isHDF5(final String containerPath, final N5AccessType accessType) {
 
 		switch (accessType) {
@@ -284,6 +302,14 @@ public class N5Factory {
 		default:
 			throw new RuntimeException();
 		}
+	}
+
+	private static boolean isZarr(final String containerPath) {
+
+		return containerPath.toLowerCase().endsWith(".zarr") ||
+				(Files.isDirectory(Paths.get(containerPath)) &&
+						(Files.isRegularFile(Paths.get(containerPath, ".zarray")) ||
+								Files.isRegularFile(Paths.get(containerPath, ".zgroup"))));
 	}
 
 	@SuppressWarnings("unchecked")

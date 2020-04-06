@@ -117,88 +117,37 @@
  *
  *
  */
-package org.saalfeldlab;
+package org.janelia.saalfeldlab;
 
-import java.io.IOException;
-import java.util.Arrays;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
-
-import org.janelia.saalfeldlab.n5.DatasetAttributes;
-import org.janelia.saalfeldlab.n5.N5Reader;
-import org.janelia.saalfeldlab.n5.imglib2.N5Utils;
-import org.saalfeldlab.N5Factory.N5Options;
-
-import net.imglib2.Cursor;
-import net.imglib2.RandomAccessibleInterval;
-import net.imglib2.type.Type;
-import net.imglib2.view.Views;
-import picocli.CommandLine;
-import picocli.CommandLine.Option;
+import net.imglib2.converter.Converter;
+import net.imglib2.type.numeric.RealType;
+import net.imglib2.type.numeric.integer.UnsignedLongType;
 
 /**
- * Test if two datasets are equal.
+ * Converts a {@link RealType} above threshold into an {@link UnsignedLongType}.
  *
  * @author Stephan Saalfeld &lt;saalfelds@janelia.hhmi.org&gt;
  */
-public class Equals implements Callable<Boolean> {
+public class ThresholdRealConverter<T extends RealType<T>> implements Converter<T, UnsignedLongType> {
 
-	protected N5Reader n5Reader1, n5Reader2;
+	protected final double threshold;
 
-	@Option(names = {"-i1", "--inputContainer1" }, required = true, description = "container path, e.g. /nrs/flyem/data/tmp/Z0115-22.h5")
-	private String inputContainerPath1 = null;
+	protected final long label;
 
-	@Option(names = {"-i2", "--inputContainer2" }, required = true, description = "container path, e.g. /nrs/flyem/data/tmp/Z0115-22.h5")
-	private String inputContainerPath2 = null;
+	protected final long bg;
 
-	@Option(names = {"-d1", "--dataset1" }, required = true, description = "dataset name, e.g. /volumes/raw")
-	private String datasetName1 = null;
+	public ThresholdRealConverter(final double threshold, final long label, final long bg) {
 
-	@Option(names = {"-d2", "--dataset2" }, required = true, description = "dataset name, e.g. /volumes/raw")
-	private String datasetName2 = null;
-
-	protected <T extends Type<T>> Boolean datasetEquals() {
-
-		try {
-			final DatasetAttributes a = n5Reader1.getDatasetAttributes(datasetName1);
-			final DatasetAttributes b = n5Reader2.getDatasetAttributes(datasetName2);
-
-			boolean equals = Arrays.equals(a.getDimensions(), b.getDimensions());
-			equals &= a.getDataType().compareTo(b.getDataType()) == 0;
-
-			if (equals) {
-				final RandomAccessibleInterval<T> imgA = (RandomAccessibleInterval<T>)N5Utils.open(n5Reader1, datasetName1);
-				final RandomAccessibleInterval<T> imgB = (RandomAccessibleInterval<T>)N5Utils.open(n5Reader2, datasetName2);
-
-				final Cursor<T> cA = Views.flatIterable(imgA).cursor();
-				final Cursor<T> cB = Views.flatIterable(imgB).cursor();
-				while (cA.hasNext()) {
-					equals &= cA.next().valueEquals(cB.next());
-				}
-			}
-
-			return equals;
-		}
-		catch (final IOException e) {
-
-			return false;
-		}
+		this.threshold = threshold;
+		this.label = label;
+		this.bg = bg;
 	}
-
 
 	@Override
-	public Boolean call() throws IOException, InterruptedException, ExecutionException {
+	public void convert(final T input, final UnsignedLongType output) {
 
-		n5Reader1 = N5Factory.createN5Reader(new N5Options(inputContainerPath1, null, null));
-		n5Reader2 = N5Factory.createN5Reader(new N5Options(inputContainerPath2, null, null));
-
-		return datasetEquals();
+		output.set(threshold < input.getRealDouble() ? label : bg);
 	}
 
-	public static void main(final String... args) {
-
-		final Boolean result = CommandLine.call(new Equals(), args);
-		if (result != null) System.out.println(result);
-	}
 }
 

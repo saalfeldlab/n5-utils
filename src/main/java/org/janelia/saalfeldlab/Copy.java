@@ -117,7 +117,7 @@
  *
  *
  */
-package org.saalfeldlab;
+package org.janelia.saalfeldlab;
 
 import java.io.IOException;
 import java.util.HashSet;
@@ -129,6 +129,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import org.janelia.saalfeldlab.N5Factory.N5Options;
 import org.janelia.saalfeldlab.n5.Bzip2Compression;
 import org.janelia.saalfeldlab.n5.Compression;
 import org.janelia.saalfeldlab.n5.DatasetAttributes;
@@ -141,7 +142,6 @@ import org.janelia.saalfeldlab.n5.XzCompression;
 import org.janelia.saalfeldlab.n5.hdf5.N5HDF5Reader;
 import org.janelia.saalfeldlab.n5.hdf5.N5HDF5Writer;
 import org.janelia.saalfeldlab.n5.imglib2.N5Utils;
-import org.saalfeldlab.N5Factory.N5Options;
 
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.type.NativeType;
