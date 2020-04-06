@@ -47,7 +47,7 @@ echo '  -XX:+UseConcMarkSweepGC \' >> n5-view-cosem
 echo -n '  -cp $JAR:' >> n5-view-cosem
 echo -n $(cat cp.txt) >> n5-view-cosem
 echo ' \' >> n5-view-cosem
-echo '  org.janelia.saalfeldlab.ViewCosem "$@"' >> n5-view-cosem
+echo '  org.janelia.saalfeldlab.cosem.ViewCosem "$@"' >> n5-view-cosem
 
 chmod a+x n5-view-cosem
 

@@ -1,4 +1,4 @@
-package org.janelia.saalfeldlab;
+package org.janelia.saalfeldlab.cosem;
 
 import bdv.viewer.Source;
 import bdv.viewer.ViewerPanel;

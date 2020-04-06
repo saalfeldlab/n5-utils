@@ -1,37 +1,37 @@
-1	ECS = 1
-2	plasma membrane = 2
-3	mito membrane = 3
-4	mito = 3 + 4 + 5
-5	mito DNA = 5
-6	golgi membrane = 6
-7	golgi = 6 + 7
-8	vesicle membrane = 8
-9	vesicle = 8 + 9
-10	MVB membrane = 10
-11	MVB = 10 + 11
-12	lysosome membrane = 12
-13	lysosome = 12 + 13
-14	LD membrane = 14
-15	LD = 14 + 15
-16	er membrane = 16 + 18 + 20
-17	er = 16 + 17 + 18 + 19 + 20 + 21 + 22 + 23
-18	(ERES membrane = 18)
-19	ERES = 18 + 19
-20	NE membrane = 20 + 22 + 23)
-21	NE = 20 + 21 + 22 + 23
-22	nuclear pore out = 22
-23	nuclear pore = 22 + 23
-24	chromatin = 24 + 25 + 26 + 27
-25	NHChrom = 25
-26	EChrom = 26
-27	NEChrom = 27
-28	nucleus = 20 + 21 + 22 + 23 + 24 + 25 + 26 + 27 + 28 + 29 (+ 37)
-29	nucleolus = 29
-30	microtubules = 30 + 31 + 36
-31	centrosome = 31 + 32 + 33
-32	distal appendages = 32
-33	subdistal appendages = 33
-34	ribosomes = 34
-35	microtubules_out = 30 + 31
+1	ECS
+2	plasma membrane
+3	mito membrane
+4	mito
+5	mito DNA
+6	golgi membrane
+7	golgi
+8	vesicle membrane
+9	vesicle
+10	MVB membrane
+11	MVB
+12	lysosome membrane
+13	lysosome
+14	LD membrane
+15	LD
+16	er membrane
+17	er
+18	ERES membrane
+19	ERES
+20	NE membrane
+21	NE
+22	nuclear pore out
+23	nuclear pore
+24	chromatin
+25	NHChrom
+26	EChrom
+27	NEChrom
+28	nucleus
+29	nucleolus
+30	microtubules
+31	centrosome
+32	distal appendages
+33	subdistal appendages
+34	ribosomes
+35	microtubules_out
 36	HChrom points
 37	EChrom points
