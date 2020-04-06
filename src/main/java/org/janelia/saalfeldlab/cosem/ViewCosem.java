@@ -127,6 +127,7 @@ import bdv.util.volatiles.SharedQueue;
 import bdv.util.volatiles.VolatileViews;
 import bdv.viewer.Source;
 import mpicbg.spim.data.sequence.FinalVoxelDimensions;
+import mpicbg.spim.data.sequence.VoxelDimensions;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.cache.volatiles.CacheHints;
 import net.imglib2.cache.volatiles.LoadingStrategy;
@@ -191,7 +192,20 @@ public class ViewCosem<T extends NativeType<T> & NumericType<T>>  implements Cal
         options.numRenderingThreads(numRenderingThreads);
         options.screenScales(screenScales);
 
-        // add raw data
+        // check if raw data path is specified, and if it's not, try to get it from the attributes
+        if (rawDataPath == null || rawDataPath.isEmpty()) {
+            // try to read raw data location from the attributes of a prediction dataset
+            final N5Reader n5 = N5Factory.createN5Reader(new N5Options(containerPath, new int[] {64}, null));
+            final String[] datasets = n5.list("");
+            if (datasets.length > 0) {
+                final String predictionDataset = datasets[0];
+                final String rawContainerPath = n5.getAttribute(predictionDataset, "raw_data_path", String.class);
+                final String rawDatasetPath = n5.getAttribute(predictionDataset, "raw_ds", String.class);
+                rawDataPath = Paths.get(rawContainerPath, rawDatasetPath).toString();
+            }
+        }
+
+        // add raw data source
         if (rawDataPath != null && !rawDataPath.isEmpty()) {
             final Pair<String, String> rawDataN5AndGroup = pathToN5ContainerAndGroup(rawDataPath);
             if (rawDataN5AndGroup == null)
@@ -201,7 +215,29 @@ public class ViewCosem<T extends NativeType<T> & NumericType<T>>  implements Cal
 
             final N5Reader n5 = N5Factory.createN5Reader(new N5Options(rawDataN5AndGroup.getA(), new int[] {64}, null));
             final String rawDataGroup = rawDataN5AndGroup.getB();
-            final double[] resolution = n5.getAttribute(rawDataGroup, "resolution", double[].class);
+            final double[] resolution;
+            {
+                double[] resolutionArr = null;
+                try {
+                    resolutionArr = n5.getAttribute(rawDataGroup, "resolution", double[].class);
+                } catch (final Throwable e) {
+                    // try to read resolution attribute as voxel dimensions
+                    final VoxelDimensions voxelDimensions = n5.getAttribute(rawDataGroup, "pixelResolution", FinalVoxelDimensions.class);
+                    if (voxelDimensions != null) {
+                        resolutionArr = new double[3];
+                        voxelDimensions.dimensions(resolutionArr);
+                    } else {
+                        // use the same resolution as in the prediction datasets
+                        final N5Reader n5Predictions = N5Factory.createN5Reader(new N5Options(containerPath, new int[] {64}, null));
+                        final String[] predictionDatasets = n5Predictions.list("");
+                        if (predictionDatasets.length > 0) {
+                            final String predictionDataset = predictionDatasets[0];
+                            resolutionArr = n5Predictions.getAttribute(predictionDataset, "resolution", double[].class);
+                        }
+                    }
+                }
+                resolution = resolutionArr;
+            }
 
             @SuppressWarnings("rawtypes")
             final Pair<RandomAccessibleInterval<NativeType>[], double[][]> n5Sources;
