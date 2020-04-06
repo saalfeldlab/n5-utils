@@ -16,6 +16,7 @@ import org.janelia.saalfeldlab.n5.imglib2.N5Utils;
 import picocli.CommandLine;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.Callable;
@@ -27,6 +28,48 @@ import java.util.concurrent.Executors;
  * @author Igor Pisarev
  */
 public class ExtractLabels implements Callable<Void> {
+
+    private static int defaultClassId = 100;
+
+    private static class CosemClassToId {
+
+        private final Map<String, Integer> mapping;
+
+        CosemClassToId() throws IOException {
+
+            mapping = new HashMap<>();
+            try (final InputStream stream = getClass().getClassLoader().getResourceAsStream("cosem-classes.txt")) {
+                try (final Scanner scanner = new Scanner(stream)) {
+
+                    while (scanner.hasNext()) {
+                        final int id = scanner.nextInt();
+                        String line = scanner.nextLine().trim();
+                        if (line.indexOf('=') != -1)
+                            line = line.substring(0, line.indexOf('=')).trim();
+
+                        while (line.startsWith("("))
+                            line = line.substring(1).trim();
+                        while (line.endsWith(")"))
+                            line = line.substring(0, line.length() - 1).trim();
+
+                        mapping.put(getClassKey(line), id);
+                    }
+                }
+            }
+        }
+
+        int getClassId(final String name) {
+
+            final String key = getClassKey(name);
+            return mapping.containsKey(key) ? mapping.get(key) : -1;
+        }
+
+        String getClassKey(final String name) {
+
+            return name.trim().replace(' ', '_').toLowerCase();
+        }
+    }
+
 
     public static <T extends NativeType<T> & RealType<T>> void extractLabels(
             final String containerPath,
@@ -51,7 +94,21 @@ public class ExtractLabels implements Callable<Void> {
 
         final ExecutorService threadPool = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
 
+        final CosemClassToId cosemClassToId = new CosemClassToId();
+
         for (final String dataset : datasets) {
+
+            final int classId;
+            {
+                final int cosemClassId = cosemClassToId.getClassId(dataset);
+                if (cosemClassId != -1) {
+                    classId = cosemClassId;
+                } else {
+                    System.err.println("Cannot find ID for class " + cosemClassToId.getClassKey(dataset) + ", using default id=" + defaultClassId + " instead");
+                    classId = defaultClassId;
+                }
+            }
+
             final RandomAccessibleInterval<T> img = N5Utils.open(n5Reader, dataset);
             final RealRandomAccessible<T> interpolatedImg = Views.interpolate(Views.extendBorder(img), new NLinearInterpolatorFactory<>());
             final RandomAccessible<T> upscaledImg = RealViews.affine(interpolatedImg, upscaleTransform);
@@ -65,7 +122,7 @@ public class ExtractLabels implements Callable<Void> {
             final Interval upscaledCropInterval = Intervals.smallestContainingInterval(new FinalRealInterval(upscaledCropMin, upscaledCropMax));
             final RandomAccessibleInterval<T> upscaledCrop = Views.interval(upscaledImg, upscaledCropInterval);
             // save as uint64 so that paintera recognizes it as label data
-            final RandomAccessibleInterval<UnsignedLongType> upscaledCropMask = Converters.convert(upscaledCrop, (in, out) -> out.set(in.getRealDouble() >= threshold ? 1 : 0), new UnsignedLongType());
+            final RandomAccessibleInterval<UnsignedLongType> upscaledCropMask = Converters.convert(upscaledCrop, (in, out) -> out.set(in.getRealDouble() >= threshold ? classId : 0), new UnsignedLongType());
 
             final int[] outBlockSize = blockSizeOptional.orElse(n5Reader.getDatasetAttributes(dataset).getBlockSize());
             final String outputDatasetPath = Paths.get("volumes/labels", dataset).toString();
@@ -79,7 +136,7 @@ public class ExtractLabels implements Callable<Void> {
                     new GzipCompression(),
                     threadPool);
 
-            n5Writer.setAttribute(outputDatasetPath, "maxId", 1);
+            n5Writer.setAttribute(outputDatasetPath, "maxId", classId);
 
             final double[] inputResolution = n5Reader.getAttribute(dataset, "resolution", double[].class);
             final double[] outputResolution = new double[3];
