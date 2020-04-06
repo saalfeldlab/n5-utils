@@ -193,28 +193,33 @@ public class ViewCosem<T extends NativeType<T> & NumericType<T>>  implements Cal
         options.screenScales(screenScales);
 
         // check if raw data path is specified, and if it's not, try to get it from the attributes
+        final String rawDataContainer, rawDataGroup;
         if (rawDataPath == null || rawDataPath.isEmpty()) {
             // try to read raw data location from the attributes of a prediction dataset
             final N5Reader n5 = N5Factory.createN5Reader(new N5Options(containerPath, new int[] {64}, null));
             final String[] datasets = n5.list("");
             if (datasets.length > 0) {
                 final String predictionDataset = datasets[0];
-                final String rawContainerPath = n5.getAttribute(predictionDataset, "raw_data_path", String.class);
-                final String rawDatasetPath = n5.getAttribute(predictionDataset, "raw_ds", String.class);
-                rawDataPath = Paths.get(rawContainerPath, rawDatasetPath).toString();
+                rawDataContainer = n5.getAttribute(predictionDataset, "raw_data_path", String.class);
+                rawDataGroup = n5.getAttribute(predictionDataset, "raw_ds", String.class);
+            } else {
+                rawDataContainer = null;
+                rawDataGroup = null;
             }
-        }
-
-        // add raw data source
-        if (rawDataPath != null && !rawDataPath.isEmpty()) {
+        } else {
             final Pair<String, String> rawDataN5AndGroup = pathToN5ContainerAndGroup(rawDataPath);
             if (rawDataN5AndGroup == null)
                 throw new IllegalArgumentException("cannot extract N5 container and dataset path from raw data parameter");
+            rawDataContainer = rawDataN5AndGroup.getA();
+            rawDataGroup = rawDataN5AndGroup.getB();
+        }
+        rawDataPath = null;
 
-            System.out.println("Add raw data: N5=" + rawDataN5AndGroup.getA() + ",  data=" + rawDataN5AndGroup.getB());
+        // add raw data source
+        if (rawDataContainer != null && !rawDataContainer.isEmpty()) {
+            System.out.println("Add raw data: N5=" + rawDataContainer + ",  group=" + rawDataGroup);
 
-            final N5Reader n5 = N5Factory.createN5Reader(new N5Options(rawDataN5AndGroup.getA(), new int[] {64}, null));
-            final String rawDataGroup = rawDataN5AndGroup.getB();
+            final N5Reader n5 = N5Factory.createN5Reader(new N5Options(rawDataContainer, new int[] {64}, null));
             final double[] resolution;
             {
                 double[] resolutionArr = null;
@@ -241,7 +246,7 @@ public class ViewCosem<T extends NativeType<T> & NumericType<T>>  implements Cal
 
             @SuppressWarnings("rawtypes")
             final Pair<RandomAccessibleInterval<NativeType>[], double[][]> n5Sources;
-            if (n5.datasetExists(rawDataN5AndGroup.getB())) {
+            if (n5.datasetExists(rawDataGroup)) {
                 // this works for javac openjdk 8
                 @SuppressWarnings({"rawtypes"})
                 final RandomAccessibleInterval<NativeType> source = (RandomAccessibleInterval)N5Utils.openVolatile(n5, rawDataGroup);
