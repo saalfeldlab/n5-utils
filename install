@@ -38,6 +38,19 @@ echo '  org.janelia.saalfeldlab.View "$@"' >> n5-view
 
 chmod a+x n5-view
 
+echo '#!/bin/bash' > n5-view-cosem
+echo '' >> n5-view-cosem
+echo "JAR=\$HOME/.m2/repository/org/janelia/saalfeldlab/n5-utils/${VERSION}/n5-utils-${VERSION}.jar" >> n5-view-cosem
+echo 'java \' >> n5-view-cosem
+echo "  -Xmx${MEM}g \\" >> n5-view-cosem
+echo '  -XX:+UseConcMarkSweepGC \' >> n5-view-cosem
+echo -n '  -cp $JAR:' >> n5-view-cosem
+echo -n $(cat cp.txt) >> n5-view-cosem
+echo ' \' >> n5-view-cosem
+echo '  org.janelia.saalfeldlab.cosem.ViewCosem "$@"' >> n5-view-cosem
+
+chmod a+x n5-view-cosem
+
 echo '#!/bin/bash' > n5-copy
 echo '' >> n5-copy
 echo "JAR=\$HOME/.m2/repository/org/janelia/saalfeldlab/n5-utils/${VERSION}/n5-utils-${VERSION}.jar" >> n5-copy

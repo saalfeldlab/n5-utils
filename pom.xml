@@ -81,7 +81,11 @@
 			<artifactId>n5-zarr</artifactId>
 			<version>0.0.2-beta</version>
 		</dependency>
-	</dependencies>
+        <dependency>
+            <groupId>net.imagej</groupId>
+            <artifactId>ij</artifactId>
+        </dependency>
+    </dependencies>
 
 	<repositories>
 		<repository>
