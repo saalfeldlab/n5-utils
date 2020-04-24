@@ -2,16 +2,16 @@
 
 VERSION="0.0.5-SNAPSHOT"
 INSTALL_DIR=${1:-$(pwd)}
-OPSYS=${2:-"linux"}
 
 echo "Installing into $INSTALL_DIR"
-echo "Assuming operating system $OPSYS"
 
 # check for operating system
-if [[ "$OPSYS" == "linux" ]]; then
+if [[ "$OSTYPE" == "linux-gnu" ]]; then
+  echo "Assuming on Linux operating system"
   MEM=$(cat /proc/meminfo | grep MemTotal | sed s/^MemTotal:\\\s*\\\|\\\s\\+[^\\\s]*$//g)
   MEM=$(($MEM/2/1024/1024))
-elif [[ "$OPSYS" == "osx" ]]; then
+elif [[ "$OSTYPE" == "darwin"* ]]; then
+  echo "Assuming on MacOS X operating system"
   # sysctl returns total hardware memory size in bytes
   MEM=$(sysctl hw.memsize | grep hw.memsize | sed s/hw.memsize://g)
   MEM=$(($MEM/2/1024/1024/1024))
@@ -37,6 +37,19 @@ echo ' \' >> n5-view
 echo '  org.janelia.saalfeldlab.View "$@"' >> n5-view
 
 chmod a+x n5-view
+
+echo '#!/bin/bash' > n5-view-cosem
+echo '' >> n5-view-cosem
+echo "JAR=\$HOME/.m2/repository/org/janelia/saalfeldlab/n5-utils/${VERSION}/n5-utils-${VERSION}.jar" >> n5-view-cosem
+echo 'java \' >> n5-view-cosem
+echo "  -Xmx${MEM}g \\" >> n5-view-cosem
+echo '  -XX:+UseConcMarkSweepGC \' >> n5-view-cosem
+echo -n '  -cp $JAR:' >> n5-view-cosem
+echo -n $(cat cp.txt) >> n5-view-cosem
+echo ' \' >> n5-view-cosem
+echo '  org.janelia.saalfeldlab.cosem.ViewCosem "$@"' >> n5-view-cosem
+
+chmod a+x n5-view-cosem
 
 echo '#!/bin/bash' > n5-copy
 echo '' >> n5-copy
