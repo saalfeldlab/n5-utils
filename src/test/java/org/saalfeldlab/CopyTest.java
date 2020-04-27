@@ -29,12 +29,16 @@ import net.imglib2.view.Views;
 
 public class CopyTest {
 
+	private static String testDirPath;
+
 	private static final long[] dimensions = new long[]{100, 200, 300};
 	private static final int[] blockSize = new int[]{44, 33, 22};
 	private static byte[] bytes;
 
 	@BeforeClass
 	public static void setUpBeforeClass() throws Exception {
+
+		testDirPath = Files.createTempDirectory("n5").toFile().getPath() + "/n5-utils-test.hdf5";
 
 		final Random rnd = new Random();
 		bytes = new byte[(int)dimensions[0] * (int)dimensions[1] * (int)dimensions[2]];
@@ -44,6 +48,8 @@ public class CopyTest {
 
 	@AfterClass
 	public static void tearDownAfterClass() throws Exception {
+
+		Files.delete(Paths.get(testDirPath).getParent());
 	}
 
 	@Before
@@ -68,8 +74,6 @@ public class CopyTest {
 
 	@Test
 	public final void test() throws IOException {
-
-		final String testDirPath = Files.createTempDirectory("n5").toFile().getPath() + "/n5-utils-test.hdf5";
 
 		final IHDF5Writer hdf5Writer = HDF5Factory.open(testDirPath);
 		final N5HDF5Writer n5Writer = new N5HDF5Writer(hdf5Writer, blockSize);
