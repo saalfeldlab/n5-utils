@@ -1,0 +1,37 @@
+1	ECS
+2	plasma membrane
+3	mito membrane
+4	mito
+5	mito DNA
+6	golgi membrane
+7	golgi
+8	vesicle membrane
+9	vesicle
+10	MVB membrane
+11	MVB
+12	lysosome membrane
+13	lysosome
+14	LD membrane
+15	LD
+16	er membrane
+17	er
+18	ERES membrane
+19	ERES
+20	NE membrane
+21	NE
+22	nuclear pore out
+23	nuclear pore
+24	chromatin
+25	NHChrom
+26	EChrom
+27	NEChrom
+28	nucleus
+29	nucleolus
+30	microtubules
+31	centrosome
+32	distal appendages
+33	subdistal appendages
+34	ribosomes
+35	microtubules_out
+36	HChrom points
+37	EChrom points
