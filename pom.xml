@@ -12,6 +12,13 @@
 	<artifactId>n5-utils</artifactId>
 	<version>0.0.5-SNAPSHOT</version>
 
+	<mailingLists>
+		<mailingList>
+			<name>Image.sc Forum</name>
+			<archive>https://forum.image.sc/tag/n5</archive>
+		</mailingList>
+	</mailingLists>
+
 	<scm>
 		<connection>scm:git:git://github.com/saalfeldlab/n5-utils</connection>
 		<developerConnection>scm:git:git@github.com:saalfeldlab/n5-utils</developerConnection>
