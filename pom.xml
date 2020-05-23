@@ -28,14 +28,21 @@
 	</ciManagement>
 
 	<properties>
-		<!-- picocli - https://picocli.info/ -->
-		<picocli.version>3.9.5</picocli.version>
-		<jackson-databind.version>2.10.1</jackson-databind.version>
 		<enforcer.skip>true</enforcer.skip>
 		<package-name>org.janelia.saalfeldlab.n5utils</package-name>
 
 		<!-- NB: Deploy releases to the SciJava Maven repository. -->
 		<releaseProfiles>deploy-to-scijava</releaseProfiles>
+
+		<n5.version>2.1.4</n5.version>
+		<n5-imglib2.version>3.4.1</n5-imglib2.version>
+		<n5-hdf5.version>1.0.4</n5-hdf5.version>
+		<n5-aws-s3.version>3.0.0</n5-aws-s3.version>
+		<n5-google-cloud.version>2.3.1</n5-google-cloud.version>
+		<n5-blosc.version>1.0.1</n5-blosc.version>
+		<n5-zarr.version>0.0.2-beta</n5-zarr.version>
+		<picocli.version>3.9.5</picocli.version>
+		<jackson-databind.version>2.10.1</jackson-databind.version>
 	</properties>
 
 	<dependencies>
@@ -46,12 +53,12 @@
 		<dependency>
 			<groupId>org.janelia.saalfeldlab</groupId>
 			<artifactId>n5</artifactId>
-			<version>2.1.4</version>
+			<version>${n5.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.janelia.saalfeldlab</groupId>
 			<artifactId>n5-imglib2</artifactId>
-			<version>3.4.1</version>
+			<version>${n5-imglib2.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>sc.fiji</groupId>
@@ -69,12 +76,12 @@
 		<dependency>
 			<groupId>org.janelia.saalfeldlab</groupId>
 			<artifactId>n5-hdf5</artifactId>
-			<version>1.0.4</version>
+			<version>${n5-hdf5.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.janelia.saalfeldlab</groupId>
 			<artifactId>n5-aws-s3</artifactId>
-			<version>3.0.0</version>
+			<version>${n5-aws-s3.version}</version>
 			<exclusions>
 				<exclusion>
 					<groupId>com.fasterxml.jackson.core</groupId>
@@ -85,7 +92,7 @@
 		<dependency>
 			<groupId>org.janelia.saalfeldlab</groupId>
 			<artifactId>n5-google-cloud</artifactId>
-			<version>2.3.1</version>
+			<version>${n5-google-cloud.version}</version>
 			<exclusions>
 				<exclusion>
 					<groupId>com.fasterxml.jackson.core</groupId>
@@ -108,12 +115,12 @@
 		<dependency>
 			<groupId>org.janelia.saalfeldlab</groupId>
 			<artifactId>n5-blosc</artifactId>
-			<version>1.0.1</version>
+			<version>${n5-blosc.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.janelia.saalfeldlab</groupId>
 			<artifactId>n5-zarr</artifactId>
-			<version>0.0.2-beta</version>
+			<version>${n5-zarr.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>com.fasterxml.jackson.core</groupId>
