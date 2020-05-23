@@ -12,6 +12,69 @@
 	<artifactId>n5-utils</artifactId>
 	<version>0.0.5-SNAPSHOT</version>
 
+	<name>N5 Utils</name>
+	<description>simple standalone BigDataViewer for multiple N5 (or HDF5) datasets.</description>
+	<url>https://github.com/saalfeldlab/n5-utils</url>
+	<inceptionYear>2017</inceptionYear>
+	<organization>
+		<name>Saalfeld Lab</name>
+		<url>http://saalfeldlab.janelia.org/</url>
+	</organization>
+	<licenses>
+		<license>
+			<name>Community Research and Academic Programming License</name>
+			<url>http://matt.might.net/articles/crapl/</url>
+			<distribution>repo</distribution>
+		</license>
+	</licenses>
+
+	<developers>
+		<developer>
+			<id>axtimwalde</id>
+			<name>Stephan Saalfeld</name>
+			<url>https://imagej.net/User:Saalfeld</url>
+			<roles>
+				<role>founder</role>
+				<role>lead</role>
+				<role>developer</role>
+				<role>debugger</role>
+				<role>reviewer</role>
+				<role>support</role>
+				<role>maintainer</role>
+			</roles>
+		</developer>
+	</developers>
+	<contributors>
+		<contributor>
+			<name>Jan Funke</name>
+			<url>https://imagej.net/User:Funke</url>
+			<properties><id>funkey</id></properties>
+		</contributor>
+		<contributor>
+			<name>Kyle Harrington</name>
+			<url>https://imagej.net/User:Kharrington</url>
+			<properties><id>kephale</id></properties>
+		</contributor>
+		<contributor>
+			<name>Gregory Jefferis</name>
+			<url>https://imagej.net/User:Jefferis</url>
+			<properties><id>jefferis</id></properties>
+		</contributor>
+		<contributor>
+			<name>Tobias Pietzsch</name>
+			<url>https://imagej.net/User:Pietzsch</url>
+			<properties><id>tpietzsch</id></properties>
+		</contributor>
+		<contributor>
+			<name>Igor Pisarev</name>
+			<url>https://imagej.net/User:Pisarevi</url>
+			<properties><id>igorpisarev</id></properties>
+		</contributor>
+		<contributor>
+			<name>Greg Fleishman</name>
+		</contributor>
+	</contributors>
+
 	<mailingLists>
 		<mailingList>
 			<name>Image.sc Forum</name>
@@ -35,8 +98,11 @@
 	</ciManagement>
 
 	<properties>
-		<enforcer.skip>true</enforcer.skip>
 		<package-name>org.janelia.saalfeldlab.n5utils</package-name>
+		<license.licenseName>crapl</license.licenseName>
+		<license.projectName>N5 Utils</license.projectName>
+		<license.organizationName>Saalfeld Lab</license.organizationName>
+		<license.copyrightOwners>Stephan Saalfeld</license.copyrightOwners>
 
 		<!-- NB: Deploy releases to the SciJava Maven repository. -->
 		<releaseProfiles>deploy-to-scijava</releaseProfiles>
