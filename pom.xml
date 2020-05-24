@@ -98,7 +98,7 @@
 	</ciManagement>
 
 	<properties>
-		<package-name>org.janelia.saalfeldlab.n5utils</package-name>
+		<package-name>org.janelia.saalfeldlab.n5.utils</package-name>
 		<license.licenseName>crapl</license.licenseName>
 		<license.projectName>N5 Utils</license.projectName>
 		<license.organizationName>Saalfeld Lab</license.organizationName>
