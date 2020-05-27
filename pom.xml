@@ -1,22 +1,123 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
-	<groupId>org.janelia.saalfeldlab</groupId>
-	<artifactId>n5-utils</artifactId>
-	<version>0.0.5-SNAPSHOT</version>
+
 	<parent>
 		<groupId>org.scijava</groupId>
 		<artifactId>pom-scijava</artifactId>
 		<version>28.0.0</version>
 	</parent>
+
+	<groupId>org.janelia.saalfeldlab</groupId>
+	<artifactId>n5-utils</artifactId>
+	<version>0.0.5-SNAPSHOT</version>
+
+	<name>N5 Utils</name>
+	<description>simple standalone BigDataViewer for multiple N5 (or HDF5) datasets.</description>
+	<url>https://github.com/saalfeldlab/n5-utils</url>
+	<inceptionYear>2017</inceptionYear>
+	<organization>
+		<name>Saalfeld Lab</name>
+		<url>http://saalfeldlab.janelia.org/</url>
+	</organization>
+	<licenses>
+		<license>
+			<name>Community Research and Academic Programming License</name>
+			<url>http://matt.might.net/articles/crapl/</url>
+			<distribution>repo</distribution>
+		</license>
+	</licenses>
+
+	<developers>
+		<developer>
+			<id>axtimwalde</id>
+			<name>Stephan Saalfeld</name>
+			<url>https://imagej.net/User:Saalfeld</url>
+			<roles>
+				<role>founder</role>
+				<role>lead</role>
+				<role>developer</role>
+				<role>debugger</role>
+				<role>reviewer</role>
+				<role>support</role>
+				<role>maintainer</role>
+			</roles>
+		</developer>
+	</developers>
+	<contributors>
+		<contributor>
+			<name>Jan Funke</name>
+			<url>https://imagej.net/User:Funke</url>
+			<properties><id>funkey</id></properties>
+		</contributor>
+		<contributor>
+			<name>Kyle Harrington</name>
+			<url>https://imagej.net/User:Kharrington</url>
+			<properties><id>kephale</id></properties>
+		</contributor>
+		<contributor>
+			<name>Gregory Jefferis</name>
+			<url>https://imagej.net/User:Jefferis</url>
+			<properties><id>jefferis</id></properties>
+		</contributor>
+		<contributor>
+			<name>Tobias Pietzsch</name>
+			<url>https://imagej.net/User:Pietzsch</url>
+			<properties><id>tpietzsch</id></properties>
+		</contributor>
+		<contributor>
+			<name>Igor Pisarev</name>
+			<url>https://imagej.net/User:Pisarevi</url>
+			<properties><id>igorpisarev</id></properties>
+		</contributor>
+		<contributor>
+			<name>Greg Fleishman</name>
+		</contributor>
+	</contributors>
+
+	<mailingLists>
+		<mailingList>
+			<name>Image.sc Forum</name>
+			<archive>https://forum.image.sc/tag/n5</archive>
+		</mailingList>
+	</mailingLists>
+
+	<scm>
+		<connection>scm:git:git://github.com/saalfeldlab/n5-utils</connection>
+		<developerConnection>scm:git:git@github.com:saalfeldlab/n5-utils</developerConnection>
+		<tag>HEAD</tag>
+		<url>https://github.com/saalfeldlab/n5-utils</url>
+	</scm>
+	<issueManagement>
+		<system>GitHub</system>
+		<url>https://github.com/saalfeldlab/n5-utils/issues</url>
+	</issueManagement>
+	<ciManagement>
+		<system>Travis CI</system>
+		<url>https://travis-ci.com/saalfeldlab/n5-utils</url>
+	</ciManagement>
+
 	<properties>
-		<!-- picocli - https://picocli.info/ -->
+		<package-name>org.janelia.saalfeldlab.n5.utils</package-name>
+		<license.licenseName>crapl</license.licenseName>
+		<license.projectName>N5 Utils</license.projectName>
+		<license.organizationName>Saalfeld Lab</license.organizationName>
+		<license.copyrightOwners>Stephan Saalfeld</license.copyrightOwners>
+
+		<!-- NB: Deploy releases to the SciJava Maven repository. -->
+		<releaseProfiles>deploy-to-scijava</releaseProfiles>
+
+		<n5.version>2.1.4</n5.version>
+		<n5-imglib2.version>3.4.1</n5-imglib2.version>
+		<n5-hdf5.version>1.0.4</n5-hdf5.version>
+		<n5-aws-s3.version>3.0.0</n5-aws-s3.version>
+		<n5-google-cloud.version>2.3.1</n5-google-cloud.version>
+		<n5-blosc.version>1.0.1</n5-blosc.version>
+		<n5-zarr.version>0.0.2-beta</n5-zarr.version>
 		<picocli.version>3.9.5</picocli.version>
 		<jackson-databind.version>2.10.1</jackson-databind.version>
-		<enforcer.skip>true</enforcer.skip>
-		<package-name>org.janelia.saalfeldlab.n5utils</package-name>
 	</properties>
+
 	<dependencies>
 		<dependency>
 			<groupId>net.imglib2</groupId>
@@ -25,12 +126,12 @@
 		<dependency>
 			<groupId>org.janelia.saalfeldlab</groupId>
 			<artifactId>n5</artifactId>
-			<version>2.1.4</version>
+			<version>${n5.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.janelia.saalfeldlab</groupId>
 			<artifactId>n5-imglib2</artifactId>
-			<version>3.4.1</version>
+			<version>${n5-imglib2.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>sc.fiji</groupId>
@@ -48,12 +149,12 @@
 		<dependency>
 			<groupId>org.janelia.saalfeldlab</groupId>
 			<artifactId>n5-hdf5</artifactId>
-			<version>1.0.4</version>
+			<version>${n5-hdf5.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.janelia.saalfeldlab</groupId>
 			<artifactId>n5-aws-s3</artifactId>
-			<version>3.0.0</version>
+			<version>${n5-aws-s3.version}</version>
 			<exclusions>
 				<exclusion>
 					<groupId>com.fasterxml.jackson.core</groupId>
@@ -64,7 +165,7 @@
 		<dependency>
 			<groupId>org.janelia.saalfeldlab</groupId>
 			<artifactId>n5-google-cloud</artifactId>
-			<version>2.3.1</version>
+			<version>${n5-google-cloud.version}</version>
 			<exclusions>
 				<exclusion>
 					<groupId>com.fasterxml.jackson.core</groupId>
@@ -87,12 +188,12 @@
 		<dependency>
 			<groupId>org.janelia.saalfeldlab</groupId>
 			<artifactId>n5-blosc</artifactId>
-			<version>1.0.1</version>
+			<version>${n5-blosc.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.janelia.saalfeldlab</groupId>
 			<artifactId>n5-zarr</artifactId>
-			<version>0.0.2-beta</version>
+			<version>${n5-zarr.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>com.fasterxml.jackson.core</groupId>
@@ -107,45 +208,8 @@
 
 	<repositories>
 		<repository>
-			<id>saalfeld-lab-maven-repo</id>
-			<url>https://saalfeldlab.github.io/maven</url>
-		</repository>
-		<repository>
-			<id>imagej.public</id>
+			<id>scijava.public</id>
 			<url>https://maven.scijava.org/content/groups/public</url>
 		</repository>
 	</repositories>
-
-	<build>
-		<plugins>
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-compiler-plugin</artifactId>
-				<configuration>
-					<source>1.8</source>
-					<target>1.8</target>
-				</configuration>
-			</plugin>
-		</plugins>
-		<pluginManagement>
-			<plugins>
-				<plugin>
-					<artifactId>maven-deploy-plugin</artifactId>
-					<version>2.8.2</version>
-					<configuration>
-						<altDeploymentRepository>internal.repo::default::file://${deploy.path}</altDeploymentRepository>
-					</configuration>
-				</plugin>
-			</plugins>
-		</pluginManagement>
-	</build>
-
-	<distributionManagement>
-		<repository>
-			<id>local-maven-repo</id>
-			<name>Local Maven Repository</name>
-			<url>file://${deploy.path}</url>
-		</repository>
-	</distributionManagement>
-
 </project>
