@@ -142,6 +142,7 @@ import org.janelia.saalfeldlab.n5.XzCompression;
 import org.janelia.saalfeldlab.n5.hdf5.N5HDF5Reader;
 import org.janelia.saalfeldlab.n5.hdf5.N5HDF5Writer;
 import org.janelia.saalfeldlab.n5.imglib2.N5Utils;
+import org.janelia.saalfeldlab.n5.jpeg.JPEGCompression;
 
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.type.NativeType;
@@ -176,6 +177,10 @@ public class Copy implements Callable<Void> {
 	@Option(names = {"-c", "--compression" }, description = "override compression type of input N5 datasets, e.g. gzip (HDF5 inputs are copied without compression by default, in this case this option sets the output compression)")
 	private String compressionString = "";
 
+	@Option(names = {"-p", "--compressionParameter" }, description = "specify a compression parameter, e.g. 5 as the compression level for gzip or 1024 as the block size for bzip2")
+	private int compressionParameter = -1;
+
+
 	protected static final int[] parseCSIntArray(final String csv) {
 
 		final String[] stringValues = csv.split(",\\s*");
@@ -192,8 +197,7 @@ public class Copy implements Callable<Void> {
 
 	public static final void main(final String... args) {
 
-		final Copy copy = new Copy();
-		CommandLine.call(copy, args);
+		System.exit(new CommandLine(new Copy()).execute(args));
 	}
 
 	protected static void reorder(final long[] array) {
@@ -323,16 +327,22 @@ public class Copy implements Callable<Void> {
 				compression = new RawCompression();
 				break;
 			case "bzip2":
-				compression = new Bzip2Compression();
+				compression = compressionParameter > 0 ? new Bzip2Compression(compressionParameter) : new Bzip2Compression();
 				break;
 			case "lz4":
-				compression = new Lz4Compression();
+				compression = compressionParameter > 0 ? new Lz4Compression(compressionParameter) : new Lz4Compression();
 				break;
 			case "xz":
-				compression = new XzCompression();
+				compression = compressionParameter >= 0 ? new XzCompression(compressionParameter) : new XzCompression();
 				break;
 			case "gzip":
-				compression = new GzipCompression();
+				compression = compressionParameter > 0 ? new GzipCompression(compressionParameter) : new GzipCompression();
+				break;
+			case "zip":
+				compression = compressionParameter > 0 ? new GzipCompression(compressionParameter, true) : new GzipCompression(-1, true);
+				break;
+			case "jpeg":
+				compression = compressionParameter > 0 ? new JPEGCompression(compressionParameter) : new JPEGCompression();
 				break;
 			default:
 				compression = null;

@@ -116,7 +116,10 @@
 		<n5-jpeg.version>0.0.1-beta1</n5-jpeg.version>
 		<n5-google-cloud>3.3.1</n5-google-cloud>
 	
-		<picocli.version>3.9.5</picocli.version>
+		<!-- TODO remove when pom-scijava-base is updated -->
+		<scijava.release.version>8</scijava.release.version>
+		<scijava.jvm.build.version>[1.8.0-101,)</scijava.jvm.build.version>
+		<maven.compiler.release>${scijava.release.version}</maven.compiler.release>
 	</properties>
 
 	<dependencies>
@@ -192,11 +195,15 @@
 		<dependency>
 			<groupId>com.fasterxml.jackson.core</groupId>
 			<artifactId>jackson-databind</artifactId>
-			<version>${jackson-databind.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>net.imagej</groupId>
 			<artifactId>ij</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.janelia.saalfeldlab</groupId>
+			<artifactId>n5-jpeg</artifactId>
+			<version>${n5-jpeg.version}</version>
 		</dependency>
 	</dependencies>
 
@@ -206,4 +213,16 @@
 			<url>https://maven.scijava.org/content/groups/public</url>
 		</repository>
 	</repositories>
+
+	<profiles>
+		<profile>
+			<id>java-8</id>
+			<activation>
+				<jdk>1.8</jdk>
+			</activation>
+			<properties>
+				<maven.compiler.release />
+			</properties>
+		</profile>
+	</profiles>
 </project>

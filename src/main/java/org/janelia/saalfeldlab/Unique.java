@@ -201,6 +201,6 @@ public class Unique implements Callable<Void> {
 	@SuppressWarnings( "unchecked" )
 	public static final void main(final String... args) {
 
-		CommandLine.call(new Unique(), args);
+		System.exit(new CommandLine(new Unique()).execute(args));
 	}
 }

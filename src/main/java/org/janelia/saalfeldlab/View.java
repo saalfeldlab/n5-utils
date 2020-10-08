@@ -506,7 +506,7 @@ public class View implements Callable<Void> {
 
 	public static final void main(final String... args) {
 
-		CommandLine.call(new View(), singlePathToArgs(args));
+		new CommandLine(new View()).execute(singlePathToArgs(args));
 	}
 
 	// hash code from https://stackoverflow.com/questions/664014/what-integer-hash-function-are-good-that-accepts-an-integer-hash-key

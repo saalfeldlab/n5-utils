@@ -1,6 +1,6 @@
 #!/bin/bash
 
-VERSION="0.0.5-SNAPSHOT"
+VERSION="0.0.6-SNAPSHOT"
 INSTALL_DIR=${1:-$(pwd)}
 
 echo "Installing into $INSTALL_DIR"
