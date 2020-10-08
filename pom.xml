@@ -119,7 +119,6 @@
 		<!-- TODO remove when pom-scijava-base is updated -->
 		<scijava.release.version>8</scijava.release.version>
 		<scijava.jvm.build.version>[1.8.0-101,)</scijava.jvm.build.version>
-		<maven.compiler.release>${scijava.release.version}</maven.compiler.release>
 	</properties>
 
 	<dependencies>
@@ -220,12 +219,12 @@
 
 	<profiles>
 		<profile>
-			<id>java-8</id>
+			<id>java-9</id>
 			<activation>
-				<jdk>1.8</jdk>
+				<jdk>[9,)</jdk>
 			</activation>
 			<properties>
-				<maven.compiler.release />
+				<maven.compiler.release>${scijava.release.version}</maven.compiler.release>
 			</properties>
 		</profile>
 	</profiles>
