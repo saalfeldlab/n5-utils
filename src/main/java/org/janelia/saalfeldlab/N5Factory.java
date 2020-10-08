@@ -125,9 +125,6 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Iterator;
 
-import org.janelia.saalfeldlab.googlecloud.GoogleCloudClientSecretsCmdLinePrompt;
-import org.janelia.saalfeldlab.googlecloud.GoogleCloudClientSecretsPrompt;
-import org.janelia.saalfeldlab.googlecloud.GoogleCloudOAuth;
 import org.janelia.saalfeldlab.googlecloud.GoogleCloudResourceManagerClient;
 import org.janelia.saalfeldlab.googlecloud.GoogleCloudStorageClient;
 import org.janelia.saalfeldlab.googlecloud.GoogleCloudStorageURI;
@@ -149,7 +146,6 @@ import com.amazonaws.auth.profile.ProfileCredentialsProvider;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.AmazonS3URI;
-import com.google.auth.Credentials;
 import com.google.cloud.resourcemanager.Project;
 import com.google.cloud.resourcemanager.ResourceManager;
 import com.google.cloud.storage.Storage;
@@ -333,23 +329,25 @@ public class N5Factory {
 	@SuppressWarnings("unchecked")
 	private static <N5 extends N5GoogleCloudStorageReader> N5 createN5GoogleCloud(final String containerPath, final N5AccessType accessType) throws IOException {
 
-		final GoogleCloudClientSecretsPrompt clientSecretsPrompt = new GoogleCloudClientSecretsCmdLinePrompt();
-		final GoogleCloudOAuth oauth = new GoogleCloudOAuth(clientSecretsPrompt);
-		final Credentials credentials = oauth.getCredentials();
+		final ResourceManager resourceManager = new GoogleCloudResourceManagerClient().create();
 
 		final GoogleCloudStorageClient storageClient;
 		switch (accessType) {
 		case Reader:
-			storageClient = new GoogleCloudStorageClient(credentials);
+			storageClient = new GoogleCloudStorageClient();
 			break;
 		case Writer:
-			storageClient = new GoogleCloudStorageClient(credentials, getGoogleCloudProjectId(credentials));
+			final Iterator<Project> projectsIterator = resourceManager.list().iterateAll().iterator();
+			if (!projectsIterator.hasNext())
+				return null;
+			final String projectId = projectsIterator.next().getProjectId();
+
+			storageClient = new GoogleCloudStorageClient(projectId);
 			break;
 		default:
 			storageClient = null;
 		}
 		final Storage storage = storageClient.create();
-
 		final GoogleCloudStorageURI googleCloudUri = new GoogleCloudStorageURI(containerPath);
 		final String bucketName = googleCloudUri.getBucket();
 
@@ -361,18 +359,5 @@ public class N5Factory {
 		default:
 			return null;
 		}
-	}
-
-	private static String getGoogleCloudProjectId(final Credentials credentials) {
-
-		// FIXME: get first project id for now
-		// TODO: prompt user for project id
-		final ResourceManager resourceManager = new GoogleCloudResourceManagerClient(credentials).create();
-		final Iterator<Project> projectsIterator = resourceManager.list().iterateAll().iterator();
-		if (!projectsIterator.hasNext())
-			throw new RuntimeException("No projects were found. Create a google cloud project first");
-		final String projectId = projectsIterator.next().getProjectId();
-
-		return projectId;
 	}
 }
