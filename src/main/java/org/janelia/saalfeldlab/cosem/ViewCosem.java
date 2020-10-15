@@ -119,10 +119,38 @@
  */
 package org.janelia.saalfeldlab.cosem;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Objects;
+import java.util.concurrent.Callable;
+
+import javax.swing.JFrame;
+import javax.swing.SwingUtilities;
+import javax.swing.WindowConstants;
+
+import org.janelia.saalfeldlab.N5Factory;
+import org.janelia.saalfeldlab.N5Factory.N5Options;
+import org.janelia.saalfeldlab.n5.N5FSReader;
+import org.janelia.saalfeldlab.n5.N5Reader;
+import org.janelia.saalfeldlab.n5.N5Reader.Version;
+import org.janelia.saalfeldlab.n5.imglib2.N5Utils;
+import org.scijava.ui.behaviour.io.InputTriggerConfig;
+import org.scijava.ui.behaviour.util.TriggerBehaviourBindings;
+
 import bdv.tools.brightness.ConverterSetup;
 import bdv.tools.brightness.MinMaxGroup;
 import bdv.tools.brightness.SetupAssignments;
-import bdv.util.*;
+import bdv.util.Bdv;
+import bdv.util.BdvFunctions;
+import bdv.util.BdvHandle;
+import bdv.util.BdvOptions;
+import bdv.util.BdvStackSource;
+import bdv.util.RandomAccessibleIntervalMipmapSource;
 import bdv.util.volatiles.SharedQueue;
 import bdv.util.volatiles.VolatileViews;
 import bdv.viewer.Source;
@@ -141,26 +169,8 @@ import net.imglib2.type.volatiles.AbstractVolatileNativeRealType;
 import net.imglib2.type.volatiles.VolatileDoubleType;
 import net.imglib2.util.Pair;
 import net.imglib2.util.ValuePair;
-import org.janelia.saalfeldlab.N5Factory;
-import org.janelia.saalfeldlab.N5Factory.N5Options;
-import org.janelia.saalfeldlab.n5.N5FSReader;
-import org.janelia.saalfeldlab.n5.N5Reader;
-import org.janelia.saalfeldlab.n5.N5Reader.Version;
-import org.janelia.saalfeldlab.n5.imglib2.N5Utils;
-import org.scijava.ui.behaviour.io.InputTriggerConfig;
-import org.scijava.ui.behaviour.util.TriggerBehaviourBindings;
 import picocli.CommandLine;
 import picocli.CommandLine.Option;
-
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Objects;
-import java.util.concurrent.Callable;
 
 /**
  *
@@ -374,6 +384,8 @@ public class ViewCosem<T extends NativeType<T> & NumericType<T>>  implements Cal
         // init extract labels dialog
         initExtractLabelsDialog(bdv.getBdvHandle(), datasetsAndSources, containerPath);
 
+        ((JFrame)SwingUtilities.getWindowAncestor(bdv.getBdvHandle().getViewerPanel())).setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+
         return null;
     }
 
@@ -436,7 +448,7 @@ public class ViewCosem<T extends NativeType<T> & NumericType<T>>  implements Cal
 
     public static final void main(final String... args) {
 
-        CommandLine.call(new ViewCosem(), args);
+        new CommandLine(new ViewCosem()).execute(args);
     }
 
     // hash code from https://stackoverflow.com/questions/664014/what-integer-hash-function-are-good-that-accepts-an-integer-hash-key

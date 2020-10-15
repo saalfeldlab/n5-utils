@@ -128,6 +128,10 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.Callable;
 
+import javax.swing.JFrame;
+import javax.swing.SwingUtilities;
+import javax.swing.WindowConstants;
+
 import org.janelia.saalfeldlab.N5Factory.N5Options;
 import org.janelia.saalfeldlab.n5.N5FSReader;
 import org.janelia.saalfeldlab.n5.N5Reader;
@@ -335,7 +339,6 @@ public class View implements Callable<Void> {
 		options.numRenderingThreads(numRenderingThreads);
 		options.screenScales(screenScales);
 
-
 		int id = 0;
 		for (final ReaderInfo entry : readerInfos) {
 
@@ -462,6 +465,8 @@ public class View implements Callable<Void> {
 			if (id == 1)
 				bdv.setColor(new ARGBType(0xffffffff));
 		}
+
+		((JFrame)SwingUtilities.getWindowAncestor(bdv.getBdvHandle().getViewerPanel())).setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
 
 		return null;
 	}
