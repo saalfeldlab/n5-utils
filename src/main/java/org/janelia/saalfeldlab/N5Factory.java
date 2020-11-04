@@ -142,7 +142,10 @@ import org.janelia.saalfeldlab.n5.s3.N5AmazonS3Writer;
 import org.janelia.saalfeldlab.n5.zarr.N5ZarrReader;
 import org.janelia.saalfeldlab.n5.zarr.N5ZarrWriter;
 
+import com.amazonaws.SdkClientException;
 import com.amazonaws.auth.profile.ProfileCredentialsProvider;
+import com.amazonaws.regions.Region;
+import com.amazonaws.regions.Regions;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.AmazonS3URI;
@@ -214,8 +217,6 @@ public class N5Factory {
 			}
 
 			if (s3Uri != null) {
-				if (s3Uri.getBucket() == null || s3Uri.getBucket().isEmpty() || (s3Uri.getKey() != null && !s3Uri.getKey().isEmpty()))
-					throw new IllegalArgumentException("N5 datasets on AWS S3 are stored in buckets. Please provide a link to a bucket.");
 				return (N5) createN5S3(options.containerPath, accessType);
 			} else {
 				// might be a google cloud link
@@ -311,16 +312,26 @@ public class N5Factory {
 	@SuppressWarnings("unchecked")
 	private static <N5 extends N5AmazonS3Reader> N5 createN5S3(final String containerPath, final N5AccessType accessType) throws IOException {
 
-		final AmazonS3 s3 = AmazonS3ClientBuilder.standard().withCredentials(new ProfileCredentialsProvider()).build();
+		AmazonS3 s3;
+		try {
+			s3 = AmazonS3ClientBuilder.standard().
+					withCredentials(new ProfileCredentialsProvider()).build();
+		} catch (final SdkClientException e) {
+			try {
+				s3 = AmazonS3ClientBuilder.defaultClient();
+			} catch (final SdkClientException f) {
+				final Region region = Regions.getCurrentRegion();
+				s3 = AmazonS3ClientBuilder.standard().withRegion(region == null ? Regions.US_EAST_1.getName() : region.getName()).build();
+			}
+		}
 
 		final AmazonS3URI s3Uri = new AmazonS3URI(containerPath);
-		final String bucketName = s3Uri.getBucket();
 
 		switch (accessType) {
 		case Reader:
-			return (N5) new N5AmazonS3Reader(s3, bucketName);
+			return (N5) new N5AmazonS3Reader(s3, s3Uri);
 		case Writer:
-			return (N5) new N5AmazonS3Writer(s3, bucketName);
+			return (N5) new N5AmazonS3Writer(s3, s3Uri);
 		default:
 			return null;
 		}
