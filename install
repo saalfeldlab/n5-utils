@@ -30,7 +30,10 @@ echo '' >> n5-view
 echo "JAR=\$HOME/.m2/repository/org/janelia/saalfeldlab/n5-utils/${VERSION}/n5-utils-${VERSION}.jar" >> n5-view
 echo 'java \' >> n5-view
 echo "  -Xmx${MEM}g \\" >> n5-view
-echo '  -XX:+UseConcMarkSweepGC \' >> n5-view
+if [[ $(java -version 2>&1 | grep version) =~ 1.8 ]]
+	then
+		echo '  -XX:+UseConcMarkSweepGC \' >> n5-view
+fi
 echo -n '  -cp $JAR:' >> n5-view
 echo -n $(cat cp.txt) >> n5-view
 echo ' \' >> n5-view
@@ -43,7 +46,10 @@ echo '' >> n5-view-cosem
 echo "JAR=\$HOME/.m2/repository/org/janelia/saalfeldlab/n5-utils/${VERSION}/n5-utils-${VERSION}.jar" >> n5-view-cosem
 echo 'java \' >> n5-view-cosem
 echo "  -Xmx${MEM}g \\" >> n5-view-cosem
-echo '  -XX:+UseConcMarkSweepGC \' >> n5-view-cosem
+if [[ $(java -version 2>&1 | grep version) =~ 1.8 ]]
+	then
+		echo '  -XX:+UseConcMarkSweepGC \' >> n5-view
+fi
 echo -n '  -cp $JAR:' >> n5-view-cosem
 echo -n $(cat cp.txt) >> n5-view-cosem
 echo ' \' >> n5-view-cosem
@@ -56,6 +62,10 @@ echo '' >> n5-copy
 echo "JAR=\$HOME/.m2/repository/org/janelia/saalfeldlab/n5-utils/${VERSION}/n5-utils-${VERSION}.jar" >> n5-copy
 echo 'java \' >> n5-copy
 echo "  -Xmx${MEM}g \\" >> n5-copy
+if [[ $(java -version 2>&1 | grep version) =~ 1.8 ]]
+	then
+		echo '  -XX:+UseConcMarkSweepGC \' >> n5-view
+fi
 echo -n '  -cp $JAR:' >> n5-copy
 echo -n $(cat cp.txt) >> n5-copy
 echo ' \' >> n5-copy
@@ -68,6 +78,10 @@ echo '' >> n5-equals
 echo "JAR=\$HOME/.m2/repository/org/janelia/saalfeldlab/n5-utils/${VERSION}/n5-utils-${VERSION}.jar" >> n5-equals
 echo 'java \' >> n5-equals
 echo "  -Xmx${MEM}g \\" >> n5-equals
+if [[ $(java -version 2>&1 | grep version) =~ 1.8 ]]
+	then
+		echo '  -XX:+UseConcMarkSweepGC \' >> n5-view
+fi
 echo -n '  -cp $JAR:' >> n5-equals
 echo -n $(cat cp.txt) >> n5-equals
 echo ' \' >> n5-equals
