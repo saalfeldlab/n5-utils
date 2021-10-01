@@ -130,6 +130,8 @@ import java.util.concurrent.Callable;
 
 import javax.swing.JFrame;
 import javax.swing.SwingUtilities;
+import javax.swing.UIManager;
+import javax.swing.UnsupportedLookAndFeelException;
 import javax.swing.WindowConstants;
 
 import org.janelia.saalfeldlab.N5Factory.N5Options;
@@ -137,6 +139,8 @@ import org.janelia.saalfeldlab.n5.N5FSReader;
 import org.janelia.saalfeldlab.n5.N5Reader;
 import org.janelia.saalfeldlab.n5.N5Reader.Version;
 import org.janelia.saalfeldlab.n5.imglib2.N5Utils;
+
+import com.formdev.flatlaf.FlatDarculaLaf;
 
 import bdv.util.AxisOrder;
 import bdv.util.Bdv;
@@ -269,7 +273,9 @@ public class View implements Callable<Void> {
 
 	@SuppressWarnings("unchecked")
 	@Override
-	public Void call() throws IOException {
+	public Void call() throws IOException, UnsupportedLookAndFeelException {
+
+		UIManager.setLookAndFeel(new FlatDarculaLaf());
 
 		maxN = 2;
 		double[] resolution = new double[]{1, 1, 1, 1};
