@@ -16,6 +16,7 @@ import javax.sound.midi.Receiver;
 import javax.sound.midi.ShortMessage;
 import javax.sound.midi.Transmitter;
 
+import gnu.trove.map.hash.TIntIntHashMap;
 import gnu.trove.map.hash.TIntObjectHashMap;
 import gnu.trove.set.hash.TIntHashSet;
 
@@ -31,6 +32,12 @@ public class XTouchMiniControl {
 
 	private static final int CONTROL_CENTER = 64;
 
+	private static final int LED_RING_SINGLE = 0;
+	private static final int LED_RING_PAN = 1;
+	private static final int LED_RING_FAN = 2;
+	private static final int LED_RING_SPREAD = 3;
+	private static final int LED_RING_TRIM = 4;
+
 	/**
 	 * sliders and knobs that generate control messages
 	 */
@@ -38,6 +45,18 @@ public class XTouchMiniControl {
 			new int[]{
 					1, 2, 3, 4, 5, 6, 7, 8, 9,
 					10, 11, 12, 13, 14, 15, 16, 17, 18});
+
+	/**
+	 * control leds
+	 */
+	private static final TIntIntHashMap CONTROL_LEDS = new TIntIntHashMap(
+			new int[]{
+					1, 2, 3, 4, 5, 6, 7, 8,
+					10, 11, 12, 13, 14, 15, 16, 17},
+			new int[]{
+					1, 2, 3, 4, 5, 6, 7, 8,
+					1, 2, 3, 4, 5, 6, 7, 8});
+
 
 	/**
 	 * controls that reset to center after each event, so they can be used for
@@ -150,6 +169,22 @@ public class XTouchMiniControl {
 		/* normal mode because LEDs cannot be used in MC mode */
 		msg.setMessage(ShortMessage.CONTROL_CHANGE, 127, 0);
 		rec.send(msg, System.currentTimeMillis());
+
+		/* activate layer A */
+		msg.setMessage(ShortMessage.PROGRAM_CHANGE, 0, 0);
+		rec.send(msg, System.currentTimeMillis());
+
+		/* set LED rings to pan mode */
+		for (final int id : CONTROL_LEDS.values()) {
+			msg.setMessage(ShortMessage.CONTROL_CHANGE, id, LED_RING_PAN);
+			rec.send(msg, System.currentTimeMillis());
+		}
+
+		/* reset all controls */
+		for (final int id : CONTROLS.toArray()) {
+			msg.setMessage(ShortMessage.CONTROL_CHANGE, CHANNEL, id, 0);
+			rec.send(msg, System.currentTimeMillis());
+		}
 	}
 
 	/**
@@ -215,32 +250,37 @@ public class XTouchMiniControl {
 			System.out.println("received : " + Arrays.toString(msg.getMessage()));
 
 			if (msg instanceof ShortMessage) {
-				final ShortMessage sm = (ShortMessage)msg;
+				final ShortMessage in = (ShortMessage)msg;
 
-				final int cmd = sm.getCommand();
+				final int cmd = in.getCommand();
 				System.out.println(cmd);
 				switch (cmd) {
 				case ShortMessage.CONTROL_CHANGE: {
-					final int id = sm.getData1();
+					final int id = in.getData1();
 					final Consumer<ShortMessage> handler = controlChangeHandlers.get(id);
 					if (relativeControls.contains(id)) {
-						final int pos = sm.getData2();
+						final int pos = in.getData2();
 						final int d = pos - CONTROL_CENTER;
 						try {
-							rec.send(new ShortMessage(cmd, CHANNEL, id, CONTROL_CENTER), System.currentTimeMillis());
-							sm.setMessage(cmd, CHANNEL, id, d);
+							final long t = System.currentTimeMillis();
+							final ShortMessage out = new ShortMessage(cmd, CHANNEL, id, CONTROL_CENTER);
+							out.setMessage(cmd, CHANNEL, id, CONTROL_CENTER + 8 * (byte)d);
+							rec.send(out, t);
+							out.setMessage(cmd, CHANNEL, id, CONTROL_CENTER);
+							rec.send(out, t + 1);
+							in.setMessage(cmd, CHANNEL, id, d);
 						} catch (final Exception e) {
 							System.err.println(e);
 						}
 					}
 					if (handler != null) {
-						handler.accept(sm);
+						handler.accept(in);
 					}
 				}
 					break;
 				case ShortMessage.NOTE_ON:
 				case ShortMessage.NOTE_OFF: {
-					final int id = sm.getData1();
+					final int id = in.getData1();
 					final Consumer<ShortMessage> handler = noteHandlers.get(id);
 					if (onKeys.contains(id)) {
 						try {
@@ -253,17 +293,17 @@ public class XTouchMiniControl {
 						}
 					}
 					if (handler != null) {
-						handler.accept(sm);
+						handler.accept(in);
 					}
 				}
 					break;
 				}
 				System.out
 						.println(
-								sm.getChannel() + " " +
-										sm.getCommand() + " " +
-										sm.getData1() + " " +
-										sm.getData2());
+								in.getChannel() + " " +
+										in.getCommand() + " " +
+										in.getData1() + " " +
+										in.getData2());
 			}
 		}
 
@@ -304,10 +344,14 @@ public class XTouchMiniControl {
 			try {
 				msg.setMessage(ShortMessage.CONTROL_CHANGE, CHANNEL, id, CONTROL_CENTER);
 				rec.send(msg, System.currentTimeMillis());
+				final int ledId = CONTROL_LEDS.get(id);
+				if (ledId != CONTROL_LEDS.getNoEntryValue()) {
+					msg.setMessage(ShortMessage.CONTROL_CHANGE, ledId, LED_RING_TRIM);
+					rec.send(msg, System.currentTimeMillis());
+				}
 			} catch (final InvalidMidiDataException e) {
 				e.printStackTrace(System.err);
 			}
-
 		}
 	}
 
@@ -320,6 +364,11 @@ public class XTouchMiniControl {
 			try {
 				msg.setMessage(ShortMessage.CONTROL_CHANGE, CHANNEL, id, 0);
 				rec.send(msg, System.currentTimeMillis());
+				final int ledId = CONTROL_LEDS.get(id);
+				if (ledId != CONTROL_LEDS.getNoEntryValue()) {
+					msg.setMessage(ShortMessage.CONTROL_CHANGE, ledId, LED_RING_PAN);
+					rec.send(msg, System.currentTimeMillis());
+				}
 			} catch (final InvalidMidiDataException e) {
 				e.printStackTrace(System.err);
 			}
