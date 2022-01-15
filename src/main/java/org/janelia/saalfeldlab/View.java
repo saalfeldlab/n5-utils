@@ -135,6 +135,7 @@ import javax.swing.UnsupportedLookAndFeelException;
 import javax.swing.WindowConstants;
 
 import org.janelia.saalfeldlab.N5Factory.N5Options;
+import org.janelia.saalfeldlab.bdv.midi.XTouchMiniBDVControl;
 import org.janelia.saalfeldlab.n5.N5FSReader;
 import org.janelia.saalfeldlab.n5.N5Reader;
 import org.janelia.saalfeldlab.n5.N5Reader.Version;
@@ -471,6 +472,12 @@ public class View implements Callable<Void> {
 			if (id == 1)
 				bdv.setColor(new ARGBType(0xffffffff));
 		}
+
+		/* create XTouchMini midi controller */
+		try {
+			final XTouchMiniBDVControl controller = new XTouchMiniBDVControl(bdv.getBdvHandle().getViewerPanel());
+
+		} catch (final Exception e) {}
 
 		((JFrame)SwingUtilities.getWindowAncestor(bdv.getBdvHandle().getViewerPanel())).setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
 
