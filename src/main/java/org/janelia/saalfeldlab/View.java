@@ -135,7 +135,8 @@ import javax.swing.UnsupportedLookAndFeelException;
 import javax.swing.WindowConstants;
 
 import org.janelia.saalfeldlab.N5Factory.N5Options;
-import org.janelia.saalfeldlab.bdv.midi.XTouchMiniBDVControl;
+import org.janelia.saalfeldlab.control.mcu.MCUBDVControls;
+import org.janelia.saalfeldlab.control.mcu.XTouchMiniMCUControlPanel;
 import org.janelia.saalfeldlab.n5.N5FSReader;
 import org.janelia.saalfeldlab.n5.N5Reader;
 import org.janelia.saalfeldlab.n5.N5Reader.Version;
@@ -475,7 +476,10 @@ public class View implements Callable<Void> {
 
 		/* create XTouchMini midi controller */
 		try {
-			final XTouchMiniBDVControl controller = new XTouchMiniBDVControl(bdv.getBdvHandle().getViewerPanel());
+//			final XTouchMiniBDVControl controller = new XTouchMiniBDVControl(bdv.getBdvHandle().getViewerPanel());
+			final MCUBDVControls controls = new MCUBDVControls(
+					bdv.getBdvHandle().getViewerPanel(),
+					XTouchMiniMCUControlPanel.build());
 
 		} catch (final Exception e) {}
 

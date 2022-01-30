@@ -26,7 +26,7 @@ import gnu.trove.set.hash.TIntHashSet;
  */
 public class XTouchMiniControl {
 
-	private static final String DEFAULT_DEVICE_NAME = "MINI [hw:1,0,0]";
+	private static final String DEFAULT_DEVICE_DESCRIPTION = "X-TOUCH MINI";
 
 	private static final int CHANNEL = 10; // uses percussion channel
 
@@ -38,6 +38,11 @@ public class XTouchMiniControl {
 	private static final int LED_RING_SPREAD = 3;
 	private static final int LED_RING_TRIM = 4;
 
+	public enum ControlType {
+		ABSOLUTE,
+		RELATIVE
+	}
+
 	/**
 	 * sliders and knobs that generate control messages
 	 */
@@ -45,6 +50,12 @@ public class XTouchMiniControl {
 			new int[]{
 					1, 2, 3, 4, 5, 6, 7, 8, 9,
 					10, 11, 12, 13, 14, 15, 16, 17, 18});
+
+	/**
+	 * LED rings
+	 */
+	private static final TIntHashSet LEDS = new TIntHashSet(
+			new int[]{1, 2, 3, 4, 5, 6, 7, 8});
 
 	/**
 	 * control leds
@@ -98,9 +109,7 @@ public class XTouchMiniControl {
 	 */
 	private static final TIntHashSet onKeys = new TIntHashSet();
 
-	private MidiDevice transDev = null;
 	private Transmitter trans = null;
-	private MidiDevice recDev = null;
 	private Receiver rec = null;
 
 	private final TIntObjectHashMap<Consumer<ShortMessage>> controlChangeHandlers = new TIntObjectHashMap<>();
@@ -108,16 +117,18 @@ public class XTouchMiniControl {
 	private final TIntObjectHashMap<Consumer<ShortMessage>> noteHandlers = new TIntObjectHashMap<>();
 
 	@SuppressWarnings("resource")
-	public XTouchMiniControl(final String deviceName)
+	public XTouchMiniControl(final String deviceDescription)
 			throws InvalidMidiDataException,
 			MidiUnavailableException,
 			InterruptedException {
+
+		MidiDevice transDev = null, recDev = null;
 
 		for (final Info info : MidiSystem.getMidiDeviceInfo()) {
 
 			final MidiDevice device = MidiSystem.getMidiDevice(info);
 			System.out.println(info.getDescription());
-			if (deviceName.equals(info.getName())) {
+			if (info.getDescription().contains(deviceDescription)) {
 //				device.open();
 //				System.out.println("name : " + info.getName());
 //				System.out.println("vendor : " + info.getVendor());
@@ -152,7 +163,7 @@ public class XTouchMiniControl {
 
 	public XTouchMiniControl() throws InvalidMidiDataException, MidiUnavailableException, InterruptedException {
 
-		this(DEFAULT_DEVICE_NAME);
+		this(DEFAULT_DEVICE_DESCRIPTION);
 	}
 
 	/**
@@ -198,25 +209,24 @@ public class XTouchMiniControl {
 	public void blink() throws InterruptedException, InvalidMidiDataException {
 
 		/* initialize */
-		final ShortMessage msg = new ShortMessage(ShortMessage.SYSTEM_RESET);
-//		rec.send(msg, System.currentTimeMillis());
+		final ShortMessage msg = new ShortMessage();
 
-		final int[] relativeControlsArray = relativeControls.toArray();
+		final int[] controls = CONTROLS.toArray();
 		for (int i = 0; i < 128; i += 8) {
-			for (final int knob : relativeControlsArray) {
-				msg.setMessage(ShortMessage.CONTROL_CHANGE, CHANNEL, knob, i);
+			for (final int id : controls) {
+				msg.setMessage(ShortMessage.CONTROL_CHANGE, CHANNEL, id, i);
 				rec.send(msg, System.currentTimeMillis());
 			}
 			Thread.sleep(20);
 		}
 		for (int i = 127; i >= CONTROL_CENTER; i -= 8) {
-			for (final int knob : relativeControlsArray) {
+			for (final int knob : controls) {
 				msg.setMessage(ShortMessage.CONTROL_CHANGE, CHANNEL, knob, i);
 				rec.send(msg, System.currentTimeMillis());
 			}
 			Thread.sleep(20);
 		}
-		for (final int knob : relativeControlsArray) {
+		for (final int knob : controls) {
 			msg.setMessage(ShortMessage.CONTROL_CHANGE, CHANNEL, knob, CONTROL_CENTER);
 			rec.send(msg, System.currentTimeMillis());
 		}
@@ -310,8 +320,8 @@ public class XTouchMiniControl {
 		@Override
 		public void close() {
 
-			transDev.close();
-			recDev.close();
+			trans.close();
+			rec.close();
 		}
 	}
 
