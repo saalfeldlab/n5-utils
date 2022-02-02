@@ -9,13 +9,13 @@ import javax.sound.midi.InvalidMidiDataException;
 import javax.sound.midi.Receiver;
 import javax.sound.midi.ShortMessage;
 
-import org.janelia.saalfeldlab.control.KeyControl;
+import org.janelia.saalfeldlab.control.ButtonControl;
 
 /**
  * @author Stephan Saalfeld &lt;saalfelds@janelia.hhmi.org&gt;
  *
  */
-public class MCUKeyControl extends MCUControl implements KeyControl {
+public class MCUButtonControl extends MCUControl implements ButtonControl {
 
 	private static final int STATUS = 0x90;
 
@@ -27,7 +27,7 @@ public class MCUKeyControl extends MCUControl implements KeyControl {
 
 	private final ShortMessage ledMsg = new ShortMessage();
 
-	public MCUKeyControl(final int led, final Receiver rec) {
+	public MCUButtonControl(final int led, final Receiver rec) {
 
 		this.led = led;
 		this.rec = rec;
@@ -84,13 +84,13 @@ public class MCUKeyControl extends MCUControl implements KeyControl {
 	}
 
 	@Override
-	public boolean isSwitch() {
+	public boolean isToggle() {
 
 		return isSwitch;
 	}
 
 	@Override
-	public void setSwitch(final boolean isSwitch) {
+	public void setToggle(final boolean isSwitch) {
 
 		this.isSwitch = isSwitch;
 		display();

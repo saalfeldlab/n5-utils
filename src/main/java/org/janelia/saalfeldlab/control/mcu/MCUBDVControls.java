@@ -5,7 +5,7 @@ package org.janelia.saalfeldlab.control.mcu;
 
 import java.util.function.IntConsumer;
 
-import org.janelia.saalfeldlab.control.KeyControl;
+import org.janelia.saalfeldlab.control.ButtonControl;
 import org.janelia.saalfeldlab.control.VPotControl;
 
 import bdv.viewer.Interpolation;
@@ -49,6 +49,7 @@ public class MCUBDVControls {
 		control.setMinMax(-10, 10);
 		control.setDisplayType(VPotControl.DISPLAY_TRIM);
 		control.addListener(new VPotAxisShiftHandler(2));
+		control.addListener(panel.getVPotControl(0));
 
 		control = panel.getVPotControl(3);
 		control.setAbsolute(false);
@@ -74,8 +75,8 @@ public class MCUBDVControls {
 		control.setDisplayType(VPotControl.DISPLAY_TRIM);
 		control.addListener(new VPotZoomHandler());
 
-		final KeyControl key = panel.getKeyControl(0);
-		key.setSwitch(true);
+		final ButtonControl key = panel.getButtonControl(0);
+		key.setToggle(true);
 		key.addListener(new InterpolationSwitcher());
 
 		System.out.println((ViewerFrame)viewerPanel.getRootPane().getParent());

@@ -15,6 +15,12 @@ import javax.sound.midi.ShortMessage;
 import org.janelia.saalfeldlab.control.VPotControl;
 
 /**
+ * V-Pot control using the MCU protocol over MIDI.  MCU V-Pots do not do
+ * anything meaningful when their value is changed from outside, so the
+ * instance does not know about the id of the actual control element but
+ * it generates visual feedback via an assigned LED display.  Only 11
+ * LEDs are used because MCU does not permit more.
+ *
  * @author Stephan Saalfeld &lt;saalfelds@janelia.hhmi.org&gt;
  *
  */
@@ -39,6 +45,11 @@ public class MCUVPotControl extends MCUControl implements VPotControl {
 	private final ScheduledThreadPoolExecutor resetExec = new ScheduledThreadPoolExecutor(1);
 	private Future<?> resetTask;
 
+	/**
+	 *
+	 * @param led LED display MIDI id associated with this V-Pot
+	 * @param rec MIDI receiver for LED display
+	 */
 	public MCUVPotControl(final int led, final Receiver rec) {
 
 		this.led = led;
@@ -111,10 +122,15 @@ public class MCUVPotControl extends MCUControl implements VPotControl {
 		}
 	}
 
+	void setValueSilently(final int value) {
+
+		this.value = Math.min(max,  Math.max(min, value));
+	}
+
 	@Override
 	public void setValue(final int value) {
 
-		this.value = Math.min(max,  Math.max(min, value));
+		setValueSilently(value);;
 
 		display();
 

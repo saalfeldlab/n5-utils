@@ -9,13 +9,11 @@ import javax.sound.midi.Receiver;
 import javax.sound.midi.ShortMessage;
 import javax.sound.midi.Transmitter;
 
-import org.janelia.saalfeldlab.control.ControlPanel;
-
 /**
  * @author Stephan Saalfeld &lt;saalfelds@janelia.hhmi.org&gt;
  *
  */
-public abstract class MCUControlPanel implements ControlPanel, Receiver {
+public abstract class MCUControlPanel implements Receiver {
 
 	private static final int STATUS_CONTROL = 0xb0;
 	private static final int STATUS_KEY = 0x90;
@@ -31,7 +29,6 @@ public abstract class MCUControlPanel implements ControlPanel, Receiver {
 		trans.setReceiver(this);
 	}
 
-	@Override
 	abstract public MCUVPotControl getVPotControl(final int i);
 
 	abstract protected MCUVPotControl getVPotControlById(final int i);
@@ -40,9 +37,17 @@ public abstract class MCUControlPanel implements ControlPanel, Receiver {
 
 	abstract protected MCUFaderControl getFaderControlById(final int i);
 
-	abstract public MCUKeyControl getKeyControl(final int i);
+	abstract public MCUButtonControl getButtonControl(final int i);
 
-	abstract protected MCUKeyControl getKeyControlById(final int i);
+	abstract protected MCUButtonControl getButtonControlById(final int i);
+
+	abstract public int getNumVPotControls();
+
+	abstract public int getNumButtonControls();
+
+	abstract public int getNumFaderControls();
+
+
 
 	protected void send(final ShortMessage msg) throws InvalidMidiDataException {
 
@@ -86,7 +91,7 @@ public abstract class MCUControlPanel implements ControlPanel, Receiver {
 				break;
 			case STATUS_KEY: {
 					final int data = sm.getData2();
-					final MCUKeyControl key = getKeyControlById(sm.getData1());
+					final MCUButtonControl key = getButtonControlById(sm.getData1());
 					key.update(data);
 				}
 				break;
