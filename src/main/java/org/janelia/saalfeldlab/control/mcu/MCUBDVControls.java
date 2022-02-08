@@ -49,7 +49,6 @@ public class MCUBDVControls {
 		control.setMinMax(-10, 10);
 		control.setDisplayType(VPotControl.DISPLAY_TRIM);
 		control.addListener(new VPotAxisShiftHandler(2));
-		control.addListener(panel.getVPotControl(0));
 
 		control = panel.getVPotControl(3);
 		control.setAbsolute(false);

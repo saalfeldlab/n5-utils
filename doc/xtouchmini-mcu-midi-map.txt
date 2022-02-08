@@ -1,0 +1,100 @@
+## input
+
+x90  x28  key 2   x00 off
+                  x01 blink
+                  x7f on
+x90  x29  key 3   x00 off
+                  x01 blink
+                  x7f on
+x90  x2a  key 4   x00 off
+                  x01 blink
+                  x7f on
+x90  x2b  key 5   x00 off
+                  x01 blink
+                  x7f on
+x90  x2c  key 6   x00 off
+                  x01 blink
+                  x7f on
+x90  x2d  key 7   x00 off
+                  x01 blink
+                  x7f on
+x90  x54  key 16  x00 off
+                  x01 blink
+                  x7f on
+x90  x55  key 17  x00 off
+                  x01 blink
+                  x7f on
+x90  x57  key 8   x00 off
+                  x01 blink
+                  x7f on
+x90  x58  key 9   x00 off
+                  x01 blink
+                  x7f on
+x90  x59  key 0   x00 off
+                  x01 blink
+                  x7f on
+x90  x5a  key 1   x00 off
+                  x01 blink
+                  x7f on
+x90  x5b  key 10  x00 off
+                  x01 blink
+                  x7f on
+x90  x5c  key 11  x00 off
+                  x01 blink
+                  x7f on
+x90  x5d  key 13  x00 off
+                  x01 blink
+                  x7f on
+x90  x5e  key 14  x00 off
+                  x01 blink
+                  x7f on
+x90  x5f  key 15  x00 off
+                  x01 blink
+                  x7f on
+
+xb0  x30--x37  vpot 0--7   x00 off
+                           x01--x0b 0100000000000--0000000000010 
+                           x10 off
+                           x11--x15 0111111000000--0000011000000
+                           x17 0000001000000
+                           x17--x1b 0000001100000--0000001111110
+                           x20 off
+                           x21--x2b 0100000000000--0111111111110
+                           x30 off
+                           x31--x36 0000001000000--0111111111110
+
+## output
+
+vpot 0--7  x90  x20--x27  x00 off  
+                          x7f on
+key 0      x90  x59       x00 off
+                          x7f on
+key 1      x90  x5a       x00 off
+                          x7f on
+key 2--7   x90  x28--x2d  x00 off
+                          x7f on
+key 8      x90  x57       x00 off
+                          x7f on
+key 9      x90  x58       x00 off
+                          x7f on
+key 10     x90  x5b       x00 off
+                          x7f on
+key 11     x90  x5c       x00 off
+                          x7f on
+key 10     x90  x5b       x00 off
+                          x7f on
+key 12     x90  x56       x00 off
+                          x7f on
+key 13-15  x90  x5d--x5f  x00 off
+                          x7f on
+key 16     x90  x54       x00 off
+                          x7f on
+key 17     x90  x55       x00 off
+                          x7f on
+
+vpot 0--7  xb0  x10--17   x01--x07 up
+                          x41--x47 down
+
+fader      xe8  x00       x40--x7f,x00--x3f (-64--63)
+                         
+                         

@@ -67,7 +67,9 @@ public class MCUVPotControl extends MCUControl implements VPotControl {
 		final int j;
 		if (absolute) {
 			final double n = max - min;
-			switch (ledType) {
+			if (listeners.size() == 0) {
+				j = 0;
+			} else switch (ledType) {
 			case DISPLAY_NONE:
 				j = 0;
 				break;
@@ -85,7 +87,10 @@ public class MCUVPotControl extends MCUControl implements VPotControl {
 			}
 		} else {
 			final int k;
-			switch (ledType) {
+			if (listeners.size() == 0) {
+				j = 0;
+				k = 0;
+			} else switch (ledType) {
 			case DISPLAY_NONE:
 				j = 0;
 				k = 0;
@@ -196,6 +201,29 @@ public class MCUVPotControl extends MCUControl implements VPotControl {
 	public void setDisplayType(final int display) {
 
 		this.ledType = display;
+		display();
+	}
+
+	@Override
+	public boolean addListener(final IntConsumer listener) {
+
+		final boolean result = super.addListener(listener);
+		display();
+		return result;
+	}
+
+	@Override
+	public boolean removeListener(final IntConsumer listener) {
+
+		final boolean result = super.removeListener(listener);
+		display();
+		return result;
+	}
+
+	@Override
+	public void clearListeners() {
+
+		super.clearListeners();
 		display();
 	}
 }
