@@ -8,6 +8,7 @@ import java.util.function.IntConsumer;
 import org.janelia.saalfeldlab.control.ButtonControl;
 import org.janelia.saalfeldlab.control.VPotControl;
 
+import bdv.viewer.AbstractViewerPanel.AlignPlane;
 import bdv.viewer.Interpolation;
 import bdv.viewer.SynchronizedViewerState;
 import bdv.viewer.ViewerFrame;
@@ -74,9 +75,27 @@ public class MCUBDVControls {
 		control.setDisplayType(VPotControl.DISPLAY_TRIM);
 		control.addListener(new VPotZoomHandler());
 
-		final ButtonControl key = panel.getButtonControl(0);
+		ButtonControl key = panel.getButtonControl(0);
 		key.setToggle(true);
 		key.addListener(new InterpolationSwitcher());
+
+		key = panel.getButtonControl(18);
+		key.setToggle(false);
+		key.addListener(i -> {
+			if (i != 0) viewer.align(AlignPlane.ZY);
+		});
+
+		key = panel.getButtonControl(19);
+		key.setToggle(false);
+		key.addListener(i -> {
+			if (i != 0) viewer.align(AlignPlane.XZ);
+		});
+
+		key = panel.getButtonControl(20);
+		key.setToggle(false);
+		key.addListener(i -> {
+			if (i != 0) viewer.align(AlignPlane.XY);
+		});
 
 		System.out.println((ViewerFrame)viewerPanel.getRootPane().getParent());
 	}

@@ -127,8 +127,8 @@
 		<jacoco-maven-plugin.version>0.8.6</jacoco-maven-plugin.version>
 
 		<enforcer.skip>true</enforcer.skip>
-		<bigdataviewer-core.version>10.1.1-SNAPSHOT</bigdataviewer-core.version>
-		<bigdataviewer-vistools.version>1.0.0-beta-26</bigdataviewer-vistools.version>
+		<bigdataviewer-core.version>10.3.2-SNAPSHOT</bigdataviewer-core.version>
+		<bigdataviewer-vistools.version>1.0.0-beta-30-SNAPSHOT</bigdataviewer-vistools.version>
 		<n5.version>2.4.0</n5.version>
 		<n5-imglib2.version>3.5.1</n5-imglib2.version>
 		<n5-hdf5.version>1.2.0</n5-hdf5.version>
@@ -137,6 +137,7 @@
 		<n5-zarr.version>0.0.6</n5-zarr.version>
 		<n5-jpeg.version>0.0.1-beta1</n5-jpeg.version>
 		<n5-google-cloud>3.3.1</n5-google-cloud>
+		<ui-behaviour.version>2.0.5</ui-behaviour.version>
 	</properties>
 
 	<dependencies>
@@ -226,6 +227,10 @@
 			<groupId>com.formdev</groupId>
 			<artifactId>flatlaf</artifactId>
 			<version>0.46</version>
+		</dependency>
+		<dependency>
+			<groupId>org.scijava</groupId>
+			<artifactId>ui-behaviour</artifactId>
 		</dependency>
 	</dependencies>
 
