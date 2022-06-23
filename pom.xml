@@ -123,7 +123,6 @@
 		<n5-zarr.version>0.0.6</n5-zarr.version>
 		<n5-jpeg.version>0.0.1-beta1</n5-jpeg.version>
 		<n5-google-cloud>3.3.1</n5-google-cloud>
-		<scijava.surefire.args>-Dnative.libpath.jhdf5="/Users/kittisopikulm/Documents/src/jhdf5/libs/native/jhdf5/aarch64-Mac OS X/libjhdf5.jnilib" -Dnative.libpath.verbose=true</scijava.surefire.args>
 	</properties>
 
 	<dependencies>
