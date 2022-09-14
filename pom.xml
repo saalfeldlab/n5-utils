@@ -5,7 +5,7 @@
 	<parent>
 		<groupId>org.scijava</groupId>
 		<artifactId>pom-scijava</artifactId>
-		<version>29.2.1</version>
+		<version>31.1.0</version>
 	</parent>
 
 	<groupId>org.janelia.saalfeldlab</groupId>
@@ -114,9 +114,10 @@
 		<maven-enforcer-plugin.version>3.0.0-M3</maven-enforcer-plugin.version>
 		<jacoco-maven-plugin.version>0.8.6</jacoco-maven-plugin.version>
 
+		<cisd.jhdf5.version>19.04.0</cisd.jhdf5.version>
 		<n5.version>2.4.0</n5.version>
 		<n5-imglib2.version>3.5.1</n5-imglib2.version>
-		<n5-hdf5.version>1.2.0</n5-hdf5.version>
+		<n5-hdf5.version>1.4.2-SNAPSHOT</n5-hdf5.version>
 		<n5-aws-s3.version>3.2.0</n5-aws-s3.version>
 		<n5-blosc.version>1.1.0</n5-blosc.version>
 		<n5-zarr.version>0.0.6</n5-zarr.version>
@@ -206,6 +207,12 @@
 			<groupId>org.janelia.saalfeldlab</groupId>
 			<artifactId>n5-jpeg</artifactId>
 			<version>${n5-jpeg.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>cisd</groupId>
+			<artifactId>jhdf5</artifactId>
+			<version>${cisd.jhdf5.version}</version>
 		</dependency>
 	</dependencies>
 
