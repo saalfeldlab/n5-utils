@@ -115,7 +115,6 @@
 		<jacoco-maven-plugin.version>0.8.6</jacoco-maven-plugin.version>
 
 		<n5-jpeg.version>0.0.1-beta1</n5-jpeg.version>
-		<n5-google-cloud>3.3.1</n5-google-cloud>
 	</properties>
 
 	<dependencies>

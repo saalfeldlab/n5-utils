@@ -144,7 +144,7 @@ import bdv.util.BdvFunctions;
 import bdv.util.BdvOptions;
 import bdv.util.BdvStackSource;
 import bdv.util.RandomAccessibleIntervalMipmapSource;
-import bdv.util.volatiles.SharedQueue;
+import bdv.cache.SharedQueue;
 import bdv.util.volatiles.VolatileViews;
 import mpicbg.spim.data.sequence.FinalVoxelDimensions;
 import net.imglib2.RandomAccessible;
