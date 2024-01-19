@@ -135,6 +135,7 @@ import org.janelia.saalfeldlab.n5.Compression;
 import org.janelia.saalfeldlab.n5.DatasetAttributes;
 import org.janelia.saalfeldlab.n5.GzipCompression;
 import org.janelia.saalfeldlab.n5.Lz4Compression;
+import org.janelia.saalfeldlab.n5.N5Exception;
 import org.janelia.saalfeldlab.n5.N5Reader;
 import org.janelia.saalfeldlab.n5.N5Writer;
 import org.janelia.saalfeldlab.n5.RawCompression;
@@ -291,7 +292,7 @@ public class Copy implements Callable<Void> {
 
 				try {
 					n5Writer.setAttribute(groupName, key, n5Reader.getAttribute(groupName, key, clazz));
-				} catch (final IOException e) {
+				} catch (final N5Exception e) {
 					e.printStackTrace(System.err);
 				}
 			}

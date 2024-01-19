@@ -133,6 +133,7 @@ import javax.swing.SwingUtilities;
 import javax.swing.WindowConstants;
 
 import org.janelia.saalfeldlab.N5Factory.N5Options;
+import org.janelia.saalfeldlab.n5.N5Exception;
 import org.janelia.saalfeldlab.n5.N5FSReader;
 import org.janelia.saalfeldlab.n5.N5Reader;
 import org.janelia.saalfeldlab.n5.N5Reader.Version;
@@ -630,7 +631,7 @@ public class View implements Callable<Void> {
 						Version version;
 						try {
 							version = n5.getVersion();
-						} catch (final IOException f) {
+						} catch (final N5Exception f) {
 							f.printStackTrace(System.err);
 							continue;
 						}

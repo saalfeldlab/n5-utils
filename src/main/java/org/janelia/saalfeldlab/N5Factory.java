@@ -131,6 +131,7 @@ import org.janelia.saalfeldlab.googlecloud.GoogleCloudStorageURI;
 import org.janelia.saalfeldlab.n5.Compression;
 import org.janelia.saalfeldlab.n5.N5FSReader;
 import org.janelia.saalfeldlab.n5.N5FSWriter;
+import org.janelia.saalfeldlab.n5.N5KeyValueReader;
 import org.janelia.saalfeldlab.n5.N5Reader;
 import org.janelia.saalfeldlab.n5.N5Writer;
 import org.janelia.saalfeldlab.n5.googlecloud.N5GoogleCloudStorageReader;
@@ -141,6 +142,7 @@ import org.janelia.saalfeldlab.n5.s3.N5AmazonS3Reader;
 import org.janelia.saalfeldlab.n5.s3.N5AmazonS3Writer;
 import org.janelia.saalfeldlab.n5.zarr.N5ZarrReader;
 import org.janelia.saalfeldlab.n5.zarr.N5ZarrWriter;
+import org.janelia.saalfeldlab.n5.zarr.ZarrKeyValueReader;
 
 import com.amazonaws.SdkClientException;
 import com.amazonaws.auth.profile.ProfileCredentialsProvider;
@@ -252,7 +254,7 @@ public class N5Factory {
 	}
 
 	@SuppressWarnings("unchecked")
-	private static <N5 extends N5FSReader> N5 createN5FS(final String containerPath, final N5AccessType accessType) throws IOException {
+	private static <N5 extends N5KeyValueReader> N5 createN5FS(final String containerPath, final N5AccessType accessType) throws IOException {
 
 		switch (accessType) {
 		case Reader:
@@ -277,7 +279,7 @@ public class N5Factory {
 		}
 	}
 
-	private static <N5 extends N5ZarrReader> N5 createN5Zarr(final String containerPath, final N5AccessType accessType) throws IOException {
+	private static <N5 extends ZarrKeyValueReader> N5 createN5Zarr(final String containerPath, final N5AccessType accessType) throws IOException {
 
 		switch (accessType) {
 		case Reader:
@@ -310,7 +312,7 @@ public class N5Factory {
 	}
 
 	@SuppressWarnings("unchecked")
-	private static <N5 extends N5AmazonS3Reader> N5 createN5S3(final String containerPath, final N5AccessType accessType) throws IOException {
+	private static <N5 extends N5KeyValueReader> N5 createN5S3(final String containerPath, final N5AccessType accessType) throws IOException {
 
 		AmazonS3 s3;
 		try {
@@ -329,16 +331,16 @@ public class N5Factory {
 
 		switch (accessType) {
 		case Reader:
-			return (N5) new N5AmazonS3Reader(s3, s3Uri);
+			return (N5) new N5AmazonS3Reader(s3, s3Uri.getBucket());
 		case Writer:
-			return (N5) new N5AmazonS3Writer(s3, s3Uri);
+			return (N5) new N5AmazonS3Writer(s3, s3Uri.getBucket());
 		default:
 			return null;
 		}
 	}
 
 	@SuppressWarnings("unchecked")
-	private static <N5 extends N5GoogleCloudStorageReader> N5 createN5GoogleCloud(final String containerPath, final N5AccessType accessType) throws IOException {
+	private static <N5 extends N5KeyValueReader> N5 createN5GoogleCloud(final String containerPath, final N5AccessType accessType) throws IOException {
 
 		final ResourceManager resourceManager = new GoogleCloudResourceManagerClient().create();
 
