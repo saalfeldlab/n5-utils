@@ -126,6 +126,7 @@ import java.util.concurrent.ExecutionException;
 
 import org.janelia.saalfeldlab.N5Factory.N5Options;
 import org.janelia.saalfeldlab.n5.DatasetAttributes;
+import org.janelia.saalfeldlab.n5.N5Exception;
 import org.janelia.saalfeldlab.n5.N5Reader;
 import org.janelia.saalfeldlab.n5.imglib2.N5Utils;
 
@@ -179,7 +180,7 @@ public class Equals implements Callable<Boolean> {
 
 			return equals;
 		}
-		catch (final IOException e) {
+		catch (final N5Exception e) {
 
 			return false;
 		}
