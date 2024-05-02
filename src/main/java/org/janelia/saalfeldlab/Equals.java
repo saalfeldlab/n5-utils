@@ -119,15 +119,15 @@
  */
 package org.janelia.saalfeldlab;
 
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 
-import org.janelia.saalfeldlab.N5Factory.N5Options;
 import org.janelia.saalfeldlab.n5.DatasetAttributes;
+import org.janelia.saalfeldlab.n5.N5Exception;
 import org.janelia.saalfeldlab.n5.N5Reader;
 import org.janelia.saalfeldlab.n5.imglib2.N5Utils;
+import org.janelia.saalfeldlab.n5.universe.N5Factory;
 
 import net.imglib2.Cursor;
 import net.imglib2.RandomAccessibleInterval;
@@ -179,7 +179,7 @@ public class Equals implements Callable<Boolean> {
 
 			return equals;
 		}
-		catch (final IOException e) {
+		catch (final N5Exception e) {
 
 			return false;
 		}
@@ -187,10 +187,10 @@ public class Equals implements Callable<Boolean> {
 
 
 	@Override
-	public Boolean call() throws IOException, InterruptedException, ExecutionException {
+	public Boolean call() throws InterruptedException, ExecutionException {
 
-		n5Reader1 = N5Factory.createN5Reader(new N5Options(inputContainerPath1, null, null));
-		n5Reader2 = N5Factory.createN5Reader(new N5Options(inputContainerPath2, null, null));
+		n5Reader1 = new N5Factory().openReader(inputContainerPath1);
+		n5Reader2 = new N5Factory().openReader(inputContainerPath2);
 
 		return datasetEquals();
 	}

@@ -119,7 +119,6 @@
  */
 package org.janelia.saalfeldlab;
 
-import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -132,19 +131,20 @@ import javax.swing.JFrame;
 import javax.swing.SwingUtilities;
 import javax.swing.WindowConstants;
 
-import org.janelia.saalfeldlab.N5Factory.N5Options;
+import org.janelia.saalfeldlab.n5.N5Exception;
 import org.janelia.saalfeldlab.n5.N5FSReader;
 import org.janelia.saalfeldlab.n5.N5Reader;
 import org.janelia.saalfeldlab.n5.N5Reader.Version;
 import org.janelia.saalfeldlab.n5.imglib2.N5Utils;
+import org.janelia.saalfeldlab.n5.universe.N5Factory;
 
+import bdv.cache.SharedQueue;
 import bdv.util.AxisOrder;
 import bdv.util.Bdv;
 import bdv.util.BdvFunctions;
 import bdv.util.BdvOptions;
 import bdv.util.BdvStackSource;
 import bdv.util.RandomAccessibleIntervalMipmapSource;
-import bdv.cache.SharedQueue;
 import bdv.util.volatiles.VolatileViews;
 import mpicbg.spim.data.sequence.FinalVoxelDimensions;
 import net.imglib2.RandomAccessible;
@@ -269,7 +269,7 @@ public class View implements Callable<Void> {
 
 	@SuppressWarnings("unchecked")
 	@Override
-	public Void call() throws IOException {
+	public Void call() {
 
 		maxN = 2;
 		double[] resolution = new double[]{1, 1, 1, 1};
@@ -278,7 +278,9 @@ public class View implements Callable<Void> {
 		int[] axes = new int[]{0, 1, 2, 3};
 		for (int i = 0, j = 0; i < containerPaths.size(); ++i) {
 			final String containerPath = containerPaths.get(i);
-			final N5Reader n5 = N5Factory.createN5Reader(new N5Options(containerPath, new int[] {64}, null));
+			final N5Reader n5 = new N5Factory()
+					.hdf5DefaultBlockSize(64)
+					.openReader(containerPath);
 			final String[] groups = groupLists.get(i).split(",\\s*");
 			final double[][] resolutions = new double[groups.length][];
 			final double[][] contrastRanges = new double[groups.length][];
@@ -592,7 +594,7 @@ public class View implements Callable<Void> {
 		return allAxes;
 	}
 
-	private static final int datasetN(final N5Reader n5, final String group) throws IOException {
+	private static final int datasetN(final N5Reader n5, final String group) {
 
 		if (n5.datasetExists(group))
 			return n5.getAttribute(group, "dimensions", long[].class).length;
@@ -609,7 +611,7 @@ public class View implements Callable<Void> {
 				offset = n5.getAttribute(group + "/s0", "offset", double[].class);
 			if (offset != null)
 				offset = Arrays.copyOf(offset, datasetN(n5, group));
-		} catch (final IOException e) {
+		} catch (final N5Exception e) {
 			offset = null;
 		}
 		return offset;
@@ -630,13 +632,14 @@ public class View implements Callable<Void> {
 						Version version;
 						try {
 							version = n5.getVersion();
-						} catch (final IOException f) {
+						} catch (final N5Exception f) {
 							f.printStackTrace(System.err);
 							continue;
 						}
 						if (version != null && version.getMajor() > 0) {
 							final String datasetPath = "/" + path.subpath(i, path.getNameCount()).toString();
 							if (n5.exists(datasetPath)) {
+								n5.close();
 								return new String[] {
 										"-i",
 										n5Path,
@@ -644,6 +647,7 @@ public class View implements Callable<Void> {
 										datasetPath};
 								}
 						}
+						n5.close();
 					} catch (final Exception e) {
 						e.printStackTrace(System.err);
 						return args;

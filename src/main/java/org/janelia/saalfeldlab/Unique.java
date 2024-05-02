@@ -119,15 +119,13 @@
  */
 package org.janelia.saalfeldlab;
 
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.concurrent.Callable;
 
-import org.janelia.saalfeldlab.N5Factory.N5Options;
 import org.janelia.saalfeldlab.n5.DatasetAttributes;
-import org.janelia.saalfeldlab.n5.GzipCompression;
 import org.janelia.saalfeldlab.n5.N5Reader;
 import org.janelia.saalfeldlab.n5.imglib2.N5Utils;
+import org.janelia.saalfeldlab.n5.universe.N5Factory;
 
 import gnu.trove.set.hash.TDoubleHashSet;
 import gnu.trove.set.hash.TLongHashSet;
@@ -173,9 +171,11 @@ public class Unique implements Callable<Void> {
 
 	@SuppressWarnings({"unchecked", "rawtypes"})
 	@Override
-	public Void call() throws IOException {
+	public Void call() {
 
-		final N5Reader n5 = N5Factory.createN5Reader(new N5Options(containerPath, new int[] {64, 64, 64}, new GzipCompression()));
+		final N5Reader n5 = new N5Factory()
+				.hdf5DefaultBlockSize(64, 64, 64)
+				.openReader(containerPath);
 		final RandomAccessibleInterval<? extends NativeType<?>> img = N5Utils.open(n5, dataset);
 
 		final DatasetAttributes attributes = n5.getDatasetAttributes(dataset);

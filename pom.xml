@@ -1,11 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 
 	<parent>
 		<groupId>org.scijava</groupId>
 		<artifactId>pom-scijava</artifactId>
-		<version>33.2.0</version>
+		<version>37.0.0</version>
 	</parent>
 
 	<groupId>org.janelia.saalfeldlab</groupId>
@@ -13,7 +15,8 @@
 	<version>0.0.7-SNAPSHOT</version>
 
 	<name>N5 Utils</name>
-	<description>simple standalone BigDataViewer for multiple N5 (or HDF5) datasets.</description>
+	<description>simple standalone BigDataViewer for multiple N5 (or HDF5)
+		datasets.</description>
 	<url>https://github.com/saalfeldlab/n5-utils</url>
 	<inceptionYear>2017</inceptionYear>
 	<organization>
@@ -48,27 +51,37 @@
 		<contributor>
 			<name>Jan Funke</name>
 			<url>https://imagej.net/User:Funke</url>
-			<properties><id>funkey</id></properties>
+			<properties>
+				<id>funkey</id>
+			</properties>
 		</contributor>
 		<contributor>
 			<name>Kyle Harrington</name>
 			<url>https://imagej.net/User:Kharrington</url>
-			<properties><id>kephale</id></properties>
+			<properties>
+				<id>kephale</id>
+			</properties>
 		</contributor>
 		<contributor>
 			<name>Gregory Jefferis</name>
 			<url>https://imagej.net/User:Jefferis</url>
-			<properties><id>jefferis</id></properties>
+			<properties>
+				<id>jefferis</id>
+			</properties>
 		</contributor>
 		<contributor>
 			<name>Tobias Pietzsch</name>
 			<url>https://imagej.net/User:Pietzsch</url>
-			<properties><id>tpietzsch</id></properties>
+			<properties>
+				<id>tpietzsch</id>
+			</properties>
 		</contributor>
 		<contributor>
 			<name>Igor Pisarev</name>
 			<url>https://imagej.net/User:Pisarevi</url>
-			<properties><id>igorpisarev</id></properties>
+			<properties>
+				<id>igorpisarev</id>
+			</properties>
 		</contributor>
 		<contributor>
 			<name>Greg Fleishman</name>
@@ -107,13 +120,6 @@
 		<!-- NB: Deploy releases to the SciJava Maven repository. -->
 		<releaseProfiles>sign,deploy-to-scijava</releaseProfiles>
 
-		<!-- TODO remove when pom-scijava-base is updated -->
-		<scijava.jvm.version>8</scijava.jvm.version>
-		<scijava.jvm.build.version>[1.8.0-101,)</scijava.jvm.build.version>
-
-		<maven-enforcer-plugin.version>3.0.0-M3</maven-enforcer-plugin.version>
-		<jacoco-maven-plugin.version>0.8.6</jacoco-maven-plugin.version>
-
 		<n5-jpeg.version>0.0.1-beta1</n5-jpeg.version>
 	</properties>
 
@@ -147,6 +153,11 @@
 			<groupId>org.janelia.saalfeldlab</groupId>
 			<artifactId>n5-hdf5</artifactId>
 		</dependency>
+		<dependency>
+			<groupId>net.imglib2</groupId>
+			<artifactId>imglib2-algorithm-gpl</artifactId>
+		</dependency>
+
 		<dependency>
 			<groupId>org.janelia.saalfeldlab</groupId>
 			<artifactId>n5-aws-s3</artifactId>
@@ -200,11 +211,13 @@
 			<artifactId>n5-jpeg</artifactId>
 			<version>${n5-jpeg.version}</version>
 		</dependency>
-
+		<dependency>
+			<groupId>org.janelia.saalfeldlab</groupId>
+			<artifactId>n5-universe</artifactId>
+		</dependency>
 		<dependency>
 			<groupId>cisd</groupId>
 			<artifactId>jhdf5</artifactId>
-			<version>${cisd.jhdf5.version}</version>
 		</dependency>
 	</dependencies>
 
