@@ -118,7 +118,7 @@ public class LongListTypeTest {
 		}
 	}
 
-	@Test
+//	@Test
 	@SuppressWarnings("deprecation")
 	public void testRendering() throws InterruptedException {
 

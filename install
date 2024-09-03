@@ -1,6 +1,6 @@
 #!/bin/bash
 
-VERSION="0.0.6-SNAPSHOT"
+VERSION="0.0.7-SNAPSHOT"
 INSTALL_DIR=${1:-$(pwd)}
 
 echo "Installing into $INSTALL_DIR"
@@ -48,7 +48,7 @@ echo 'java \' >> n5-view-cosem
 echo "  -Xmx${MEM}g \\" >> n5-view-cosem
 if [[ $(java -version 2>&1 | grep version) =~ 1.8 ]]
 	then
-		echo '  -XX:+UseConcMarkSweepGC \' >> n5-view
+		echo '  -XX:+UseConcMarkSweepGC \' >> n5-view-cosem
 fi
 echo -n '  -cp $JAR:' >> n5-view-cosem
 echo -n $(cat cp.txt) >> n5-view-cosem
@@ -64,7 +64,7 @@ echo 'java \' >> n5-copy
 echo "  -Xmx${MEM}g \\" >> n5-copy
 if [[ $(java -version 2>&1 | grep version) =~ 1.8 ]]
 	then
-		echo '  -XX:+UseConcMarkSweepGC \' >> n5-view
+		echo '  -XX:+UseConcMarkSweepGC \' >> n5-copy
 fi
 echo -n '  -cp $JAR:' >> n5-copy
 echo -n $(cat cp.txt) >> n5-copy
@@ -80,7 +80,7 @@ echo 'java \' >> n5-equals
 echo "  -Xmx${MEM}g \\" >> n5-equals
 if [[ $(java -version 2>&1 | grep version) =~ 1.8 ]]
 	then
-		echo '  -XX:+UseConcMarkSweepGC \' >> n5-view
+		echo '  -XX:+UseConcMarkSweepGC \' >> n5-equals
 fi
 echo -n '  -cp $JAR:' >> n5-equals
 echo -n $(cat cp.txt) >> n5-equals

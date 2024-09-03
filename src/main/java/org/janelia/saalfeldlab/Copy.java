@@ -119,7 +119,6 @@
  */
 package org.janelia.saalfeldlab;
 
-import java.io.IOException;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -129,12 +128,12 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import org.janelia.saalfeldlab.N5Factory.N5Options;
 import org.janelia.saalfeldlab.n5.Bzip2Compression;
 import org.janelia.saalfeldlab.n5.Compression;
 import org.janelia.saalfeldlab.n5.DatasetAttributes;
 import org.janelia.saalfeldlab.n5.GzipCompression;
 import org.janelia.saalfeldlab.n5.Lz4Compression;
+import org.janelia.saalfeldlab.n5.N5Exception;
 import org.janelia.saalfeldlab.n5.N5Reader;
 import org.janelia.saalfeldlab.n5.N5Writer;
 import org.janelia.saalfeldlab.n5.RawCompression;
@@ -143,6 +142,7 @@ import org.janelia.saalfeldlab.n5.hdf5.N5HDF5Reader;
 import org.janelia.saalfeldlab.n5.hdf5.N5HDF5Writer;
 import org.janelia.saalfeldlab.n5.imglib2.N5Utils;
 import org.janelia.saalfeldlab.n5.jpeg.JPEGCompression;
+import org.janelia.saalfeldlab.n5.universe.N5Factory;
 
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.type.NativeType;
@@ -236,7 +236,7 @@ public class Copy implements Callable<Void> {
 			reorder(array);
 	}
 
-	protected <T extends NativeType<T>> void copyDataset(final String datasetName) throws IOException, InterruptedException, ExecutionException {
+	protected <T extends NativeType<T>> void copyDataset(final String datasetName) throws InterruptedException, ExecutionException {
 
 		System.out.println(datasetName);
 
@@ -272,8 +272,7 @@ public class Copy implements Callable<Void> {
 		copyAttributes(datasetName);
 	}
 
-	protected void copyAttributes(final String groupName)
-			throws IOException {
+	protected void copyAttributes(final String groupName) {
 
 		System.out.println("  attributes:");
 
@@ -291,14 +290,14 @@ public class Copy implements Callable<Void> {
 
 				try {
 					n5Writer.setAttribute(groupName, key, n5Reader.getAttribute(groupName, key, clazz));
-				} catch (final IOException e) {
+				} catch (final N5Exception e) {
 					e.printStackTrace(System.err);
 				}
 			}
 		});
 	}
 
-	protected <T extends NativeType<T>> void copyGroup(final String groupName) throws IOException, InterruptedException, ExecutionException {
+	protected <T extends NativeType<T>> void copyGroup(final String groupName) throws InterruptedException, ExecutionException {
 
 		System.out.println(groupName);
 
@@ -315,7 +314,7 @@ public class Copy implements Callable<Void> {
 	}
 
 	@Override
-	public Void call() throws IOException, InterruptedException, ExecutionException {
+	public Void call() throws InterruptedException, ExecutionException {
 
 		blockSize = blockSizeString == null ? null : parseCSIntArray(blockSizeString);
 
@@ -349,8 +348,14 @@ public class Copy implements Callable<Void> {
 			}
 		}
 
-		n5Reader = N5Factory.createN5Reader(new N5Options(inputContainerPath, blockSize, compression));
-		n5Writer = N5Factory.createN5Writer(new N5Options(outputContainerPath, blockSize, compression));
+		final N5Factory n5Factory = new N5Factory()
+				.hdf5DefaultBlockSize(blockSize)
+				.zarrDimensionSeparator(".")
+				.zarrMapN5Attributes(false)
+				.zarrMergeAttributes(false);
+
+		n5Reader = n5Factory.openReader(inputContainerPath);
+		n5Writer = n5Factory.openWriter(outputContainerPath);
 
 		if (groupNames == null)
 			copyGroup("");

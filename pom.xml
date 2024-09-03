@@ -7,15 +7,16 @@
 	<parent>
 		<groupId>org.scijava</groupId>
 		<artifactId>pom-scijava</artifactId>
-		<version>31.1.0</version>
+		<version>37.0.0</version>
 	</parent>
 
 	<groupId>org.janelia.saalfeldlab</groupId>
 	<artifactId>n5-utils</artifactId>
-	<version>0.0.6-SNAPSHOT</version>
+	<version>0.0.7-SNAPSHOT</version>
 
 	<name>N5 Utils</name>
-	<description>simple standalone BigDataViewer for multiple N5 (or HDF5) datasets.</description>
+	<description>simple standalone BigDataViewer for multiple N5 (or HDF5)
+		datasets.</description>
 	<url>https://github.com/saalfeldlab/n5-utils</url>
 	<inceptionYear>2017</inceptionYear>
 	<organization>
@@ -105,8 +106,8 @@
 		<url>https://github.com/saalfeldlab/n5-utils/issues</url>
 	</issueManagement>
 	<ciManagement>
-		<system>Travis CI</system>
-		<url>https://travis-ci.com/saalfeldlab/n5-utils</url>
+		<system>GitHub Actions</system>
+		<url>https://github.com/saalfeldlab/n5-utils/actions</url>
 	</ciManagement>
 
 	<properties>
@@ -117,27 +118,21 @@
 		<license.copyrightOwners>Stephan Saalfeld</license.copyrightOwners>
 
 		<!-- NB: Deploy releases to the SciJava Maven repository. -->
-		<releaseProfiles>deploy-to-scijava</releaseProfiles>
+		<releaseProfiles>sign,deploy-to-scijava</releaseProfiles>
 
-		<!-- TODO remove when pom-scijava-base is updated -->
-		<scijava.jvm.version>8</scijava.jvm.version>
-		<scijava.jvm.build.version>[1.8.0-101,)</scijava.jvm.build.version>
-
-		<maven-enforcer-plugin.version>3.0.0-M3</maven-enforcer-plugin.version>
-		<jacoco-maven-plugin.version>0.8.6</jacoco-maven-plugin.version>
-
-		<enforcer.skip>true</enforcer.skip>
-		<bigdataviewer-core.version>10.3.2-SNAPSHOT</bigdataviewer-core.version>
-		<bigdataviewer-vistools.version>1.0.0-beta-30-SNAPSHOT</bigdataviewer-vistools.version>
-		<n5.version>2.4.0</n5.version>
-		<n5-imglib2.version>3.5.1</n5-imglib2.version>
-		<n5-hdf5.version>1.2.0</n5-hdf5.version>
-		<n5-aws-s3.version>3.2.0</n5-aws-s3.version>
-		<n5-blosc.version>1.1.0</n5-blosc.version>
-		<n5-zarr.version>0.0.6</n5-zarr.version>
+		<n5.version>3.2.0</n5.version>
+		<n5-aws-s3.version>4.2.0</n5-aws-s3.version>
+		<n5-blosc.version>1.1.1</n5-blosc.version>
+		<n5-google-cloud.version>4.1.0</n5-google-cloud.version>
+		<n5-hdf5.version>2.2.0</n5-hdf5.version>
+		<n5-ij.version>4.2.1</n5-ij.version>
+		<n5-imglib2.version>7.0.0</n5-imglib2.version>
 		<n5-jpeg.version>0.0.1-beta1</n5-jpeg.version>
-		<n5-google-cloud>3.3.1</n5-google-cloud>
-		<ui-behaviour.version>2.0.5</ui-behaviour.version>
+		<n5-universe.version>1.6.0</n5-universe.version>
+		<n5-viewer_fiji.version>6.1.1</n5-viewer_fiji.version>
+		<n5-zarr.version>1.3.4</n5-zarr.version>
+		<n5-zstandard.version>1.0.2</n5-zstandard.version>
+		<imagej-legacy.version>1.2.2</imagej-legacy.version>
 	</properties>
 
 	<dependencies>
@@ -170,6 +165,11 @@
 			<groupId>org.janelia.saalfeldlab</groupId>
 			<artifactId>n5-hdf5</artifactId>
 		</dependency>
+		<dependency>
+			<groupId>net.imglib2</groupId>
+			<artifactId>imglib2-algorithm-gpl</artifactId>
+		</dependency>
+
 		<dependency>
 			<groupId>org.janelia.saalfeldlab</groupId>
 			<artifactId>n5-aws-s3</artifactId>
@@ -222,6 +222,14 @@
 			<groupId>org.janelia.saalfeldlab</groupId>
 			<artifactId>n5-jpeg</artifactId>
 			<version>${n5-jpeg.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.janelia.saalfeldlab</groupId>
+			<artifactId>n5-universe</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>cisd</groupId>
+			<artifactId>jhdf5</artifactId>
 		</dependency>
 		<dependency>
 			<groupId>com.formdev</groupId>

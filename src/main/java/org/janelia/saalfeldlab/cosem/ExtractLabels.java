@@ -1,20 +1,5 @@
 package org.janelia.saalfeldlab.cosem;
 
-import net.imglib2.*;
-import net.imglib2.converter.Converters;
-import net.imglib2.interpolation.randomaccess.NLinearInterpolatorFactory;
-import net.imglib2.realtransform.AffineTransform3D;
-import net.imglib2.realtransform.RealViews;
-import net.imglib2.realtransform.Scale3D;
-import net.imglib2.type.NativeType;
-import net.imglib2.type.numeric.RealType;
-import net.imglib2.type.numeric.integer.UnsignedLongType;
-import net.imglib2.util.Intervals;
-import net.imglib2.view.Views;
-import org.janelia.saalfeldlab.n5.*;
-import org.janelia.saalfeldlab.n5.imglib2.N5Utils;
-import picocli.CommandLine;
-
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.Arrays;
@@ -26,177 +11,204 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import org.janelia.saalfeldlab.n5.GzipCompression;
+import org.janelia.saalfeldlab.n5.N5Reader;
+import org.janelia.saalfeldlab.n5.N5Writer;
+import org.janelia.saalfeldlab.n5.imglib2.N5Utils;
+import org.janelia.saalfeldlab.n5.universe.N5Factory;
+
+import net.imglib2.FinalInterval;
+import net.imglib2.FinalRealInterval;
+import net.imglib2.Interval;
+import net.imglib2.RandomAccessible;
+import net.imglib2.RandomAccessibleInterval;
+import net.imglib2.RealRandomAccessible;
+import net.imglib2.converter.Converters;
+import net.imglib2.interpolation.randomaccess.NLinearInterpolatorFactory;
+import net.imglib2.realtransform.AffineTransform3D;
+import net.imglib2.realtransform.RealViews;
+import net.imglib2.realtransform.Scale3D;
+import net.imglib2.type.NativeType;
+import net.imglib2.type.numeric.RealType;
+import net.imglib2.type.numeric.integer.UnsignedLongType;
+import net.imglib2.util.Intervals;
+import net.imglib2.view.Views;
+import picocli.CommandLine;
+
 /**
  * @author Igor Pisarev
  */
 public class ExtractLabels implements Callable<Void> {
 
-    private static int defaultClassId = 100;
+	private static int defaultClassId = 100;
 
-    public static <T extends NativeType<T> & RealType<T>> void extractLabels(
-            final String containerPath,
-            final Interval cropInterval,
-            final String outputPath,
-            final OptionalDouble scalingOptional,
-            final OptionalDouble thresholdOptional,
-            final Optional<List<String>> datasetsOptional,
-            final Optional<int[]> blockSizeOptional) throws IOException, ExecutionException, InterruptedException {
+	public static <T extends NativeType<T> & RealType<T>> void extractLabels(
+	        final String containerPath,
+	        final Interval cropInterval,
+	        final String outputPath,
+	        final OptionalDouble scalingOptional,
+	        final OptionalDouble thresholdOptional,
+	        final Optional<List<String>> datasetsOptional,
+	        final Optional<int[]> blockSizeOptional) throws ExecutionException, InterruptedException, IOException {
 
-        final N5Reader n5Reader = new N5FSReader(containerPath);
-        final List<String> datasets = datasetsOptional.isPresent() ? datasetsOptional.get() :
-                Arrays.asList(n5Reader.list("/"));
+		final N5Factory n5Factory = new N5Factory();
+		blockSizeOptional.ifPresent(b -> n5Factory.hdf5DefaultBlockSize(b));
 
-        final double scaling = scalingOptional.orElse(1);
-        final double threshold = thresholdOptional.orElse(0);
+		final N5Reader n5Reader = n5Factory.openReader(containerPath);
+		final List<String> datasets = datasetsOptional.isPresent() ? datasetsOptional.get() :
+	            Arrays.asList(n5Reader.list("/"));
 
-        final AffineTransform3D upscaleTransform = new AffineTransform3D();
-        upscaleTransform
-                .preConcatenate(new Scale3D(scaling, scaling, scaling));
-//                .preConcatenate(new Translation3D(-0.5, -0.5, -0.5));
+	    final double scaling = scalingOptional.orElse(1);
+	    final double threshold = thresholdOptional.orElse(0);
 
-        final ExecutorService threadPool = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+	    final AffineTransform3D upscaleTransform = new AffineTransform3D();
+	    upscaleTransform
+	            .preConcatenate(new Scale3D(scaling, scaling, scaling));
+	//                .preConcatenate(new Translation3D(-0.5, -0.5, -0.5));
 
-        final CosemClassToId cosemClassToId = new CosemClassToId();
+	    final ExecutorService threadPool = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
 
-        for (final String dataset : datasets) {
+	    final CosemClassToId cosemClassToId = new CosemClassToId();
 
-            final int classId;
-            {
-                final int cosemClassId = cosemClassToId.getClassId(dataset);
-                if (cosemClassId != -1) {
-                    classId = cosemClassId;
-                } else {
-                    System.err.println("Cannot find ID for class " + cosemClassToId.getClassKey(dataset) + ", using default id=" + defaultClassId + " instead");
-                    classId = defaultClassId;
-                }
-            }
+	    for (final String dataset : datasets) {
 
-            final RandomAccessibleInterval<T> img = N5Utils.open(n5Reader, dataset);
-            final RealRandomAccessible<T> interpolatedImg = Views.interpolate(Views.extendBorder(img), new NLinearInterpolatorFactory<>());
-            final RandomAccessible<T> upscaledImg = RealViews.affine(interpolatedImg, upscaleTransform);
+	        final int classId;
+	        {
+	            final int cosemClassId = cosemClassToId.getClassId(dataset);
+	            if (cosemClassId != -1) {
+	                classId = cosemClassId;
+	            } else {
+	                System.err.println("Cannot find ID for class " + cosemClassToId.getClassKey(dataset) + ", using default id=" + defaultClassId + " instead");
+	                classId = defaultClassId;
+	            }
+	        }
 
-            final double[] upscaledCropMin = new double[3], upscaledCropMax = new double[3];
-            Arrays.setAll(upscaledCropMin, d -> cropInterval.realMin(d));
-            Arrays.setAll(upscaledCropMax, d -> cropInterval.realMax(d) + 1);
-            upscaleTransform.apply(upscaledCropMin, upscaledCropMin);
-            upscaleTransform.apply(upscaledCropMax, upscaledCropMax);
-            Arrays.setAll(upscaledCropMax, d -> upscaledCropMax[d] - 1);
-            final Interval upscaledCropInterval = Intervals.smallestContainingInterval(new FinalRealInterval(upscaledCropMin, upscaledCropMax));
-            final RandomAccessibleInterval<T> upscaledCrop = Views.interval(upscaledImg, upscaledCropInterval);
-            // save as uint64 so that paintera recognizes it as label data
-            final RandomAccessibleInterval<UnsignedLongType> upscaledCropMask = Converters.convert(upscaledCrop, (in, out) -> out.set(in.getRealDouble() >= threshold ? classId : 0), new UnsignedLongType());
+	        final RandomAccessibleInterval<T> img = N5Utils.open(n5Reader, dataset);
+	        final RealRandomAccessible<T> interpolatedImg = Views.interpolate(Views.extendBorder(img), new NLinearInterpolatorFactory<>());
+	        final RandomAccessible<T> upscaledImg = RealViews.affine(interpolatedImg, upscaleTransform);
 
-            final int[] outBlockSize = blockSizeOptional.orElse(n5Reader.getDatasetAttributes(dataset).getBlockSize());
-            final String outputDatasetPath = Paths.get("volumes/labels", dataset).toString();
-            final N5Writer n5Writer = new N5FSWriter(outputPath);
+	        final double[] upscaledCropMin = new double[3], upscaledCropMax = new double[3];
+	        Arrays.setAll(upscaledCropMin, d -> cropInterval.realMin(d));
+	        Arrays.setAll(upscaledCropMax, d -> cropInterval.realMax(d) + 1);
+	        upscaleTransform.apply(upscaledCropMin, upscaledCropMin);
+	        upscaleTransform.apply(upscaledCropMax, upscaledCropMax);
+	        Arrays.setAll(upscaledCropMax, d -> upscaledCropMax[d] - 1);
+	        final Interval upscaledCropInterval = Intervals.smallestContainingInterval(new FinalRealInterval(upscaledCropMin, upscaledCropMax));
+	        final RandomAccessibleInterval<T> upscaledCrop = Views.interval(upscaledImg, upscaledCropInterval);
+	        // save as uint64 so that paintera recognizes it as label data
+	        final RandomAccessibleInterval<UnsignedLongType> upscaledCropMask = Converters.convert(upscaledCrop, (in, out) -> out.set(in.getRealDouble() >= threshold ? classId : 0), new UnsignedLongType());
 
-            N5Utils.save(
-                    upscaledCropMask,
-                    n5Writer,
-                    outputDatasetPath,
-                    outBlockSize,
-                    new GzipCompression(),
-                    threadPool);
+	        final int[] outBlockSize = blockSizeOptional.orElse(n5Reader.getDatasetAttributes(dataset).getBlockSize());
+	        final String outputDatasetPath = Paths.get("volumes/labels", dataset).toString();
+	        final N5Writer n5Writer = n5Factory.openWriter(outputPath);
 
-            n5Writer.setAttribute(outputDatasetPath, "maxId", classId);
+	        N5Utils.save(
+	                upscaledCropMask,
+	                n5Writer,
+	                outputDatasetPath,
+	                outBlockSize,
+	                new GzipCompression(),
+	                threadPool);
 
-            final double[] inputResolution = n5Reader.getAttribute(dataset, "resolution", double[].class);
-            final double[] outputResolution = new double[3];
-            Arrays.setAll(outputResolution, d -> (inputResolution != null ? inputResolution[d] : 1) * scaling);
-            n5Writer.setAttribute(outputDatasetPath, "resolution", outputResolution);
+	        n5Writer.setAttribute(outputDatasetPath, "maxId", classId);
 
-            final double[] inputOffset = n5Reader.getAttribute(dataset, "offset", double[].class);
-            final double[] scaledCropMin = new double[3];
-            Arrays.setAll(scaledCropMin, d -> cropInterval.realMin(d) * outputResolution[d]);
-            final double[] inputScaledOffset = new double[3];
-            Arrays.setAll(inputScaledOffset, d -> (inputOffset != null ? inputOffset[d] : 0) * scaling);
-            final double[] outputOffset = new double[3];
-            Arrays.setAll(outputOffset, d -> inputScaledOffset[d] + scaledCropMin[d]);
-            n5Writer.setAttribute(outputDatasetPath, "offset", outputOffset);
-        }
+	        final double[] inputResolution = n5Reader.getAttribute(dataset, "resolution", double[].class);
+	        final double[] outputResolution = new double[3];
+	        Arrays.setAll(outputResolution, d -> (inputResolution != null ? inputResolution[d] : 1) * scaling);
+	        n5Writer.setAttribute(outputDatasetPath, "resolution", outputResolution);
 
-        threadPool.shutdown();
-    }
+	        final double[] inputOffset = n5Reader.getAttribute(dataset, "offset", double[].class);
+	        final double[] scaledCropMin = new double[3];
+	        Arrays.setAll(scaledCropMin, d -> cropInterval.realMin(d) * outputResolution[d]);
+	        final double[] inputScaledOffset = new double[3];
+	        Arrays.setAll(inputScaledOffset, d -> (inputOffset != null ? inputOffset[d] : 0) * scaling);
+	        final double[] outputOffset = new double[3];
+	        Arrays.setAll(outputOffset, d -> inputScaledOffset[d] + scaledCropMin[d]);
+	        n5Writer.setAttribute(outputDatasetPath, "offset", outputOffset);
+	    }
 
-    @CommandLine.Option(names = {"-i", "--container"}, required = true, description = "container path, e.g. -i $HOME/fib19.n5")
-    private String containerPath = null;
+	    threadPool.shutdown();
+	}
 
-    @CommandLine.Option(names = {"-d", "--datasets"}, required = false, description = "datasets (optional, by default all will be included)")
-    private List<String> datasets = null;
+	@CommandLine.Option(names = {"-i", "--container"}, required = true, description = "container path, e.g. -i $HOME/fib19.n5")
+	private String containerPath = null;
 
-    @CommandLine.Option(names = {"-o", "--output"}, required = true, description = "output container")
-    private String outputPath = null;
+	@CommandLine.Option(names = {"-d", "--datasets"}, required = false, description = "datasets (optional, by default all will be included)")
+	private List<String> datasets = null;
 
-    @CommandLine.Option(names = {"-min", "--min"}, required = true, description = "crop min")
-    private String cropMinStr = null;
+	@CommandLine.Option(names = {"-o", "--output"}, required = true, description = "output container")
+	private String outputPath = null;
 
-    @CommandLine.Option(names = {"-max", "--max"}, required = true, description = "crop max")
-    private String cropMaxStr = null;
+	@CommandLine.Option(names = {"-min", "--min"}, required = true, description = "crop min")
+	private String cropMinStr = null;
 
-    @CommandLine.Option(names = {"-b", "--blockSize"}, required = false, description = "block size")
-    private String blockSizeStr = null;
+	@CommandLine.Option(names = {"-max", "--max"}, required = true, description = "crop max")
+	private String cropMaxStr = null;
 
-    @CommandLine.Option(names = {"-t", "--threshold"}, required = false, description = "threshold")
-    private double threshold = 128;
+	@CommandLine.Option(names = {"-b", "--blockSize"}, required = false, description = "block size")
+	private String blockSizeStr = null;
 
-    @CommandLine.Option(names = {"-s", "--scale"}, required = false, description = "scaling")
-    private double scaling = 2;
+	@CommandLine.Option(names = {"-t", "--threshold"}, required = false, description = "threshold")
+	private double threshold = 128;
 
-    protected static final long[] parseCSLongArray(final String csv) {
+	@CommandLine.Option(names = {"-s", "--scale"}, required = false, description = "scaling")
+	private double scaling = 2;
 
-        if (csv == null)
-            return null;
-        final String[] stringValues = csv.split(",\\s*");
-        final long[] array = new long[stringValues.length];
-        try {
-            for (int i = 0; i < array.length; ++i)
-                array[i] = Long.parseLong(stringValues[i]);
-        } catch (final NumberFormatException e) {
-            e.printStackTrace(System.err);
-            return null;
-        }
-        return array;
-    }
+	protected static final long[] parseCSLongArray(final String csv) {
 
-    protected static final int[] parseCSIntArray(final String csv) {
+	    if (csv == null)
+	        return null;
+	    final String[] stringValues = csv.split(",\\s*");
+	    final long[] array = new long[stringValues.length];
+	    try {
+	        for (int i = 0; i < array.length; ++i)
+	            array[i] = Long.parseLong(stringValues[i]);
+	    } catch (final NumberFormatException e) {
+	        e.printStackTrace(System.err);
+	        return null;
+	    }
+	    return array;
+	}
 
-        if (csv == null)
-            return null;
-        final String[] stringValues = csv.split(",\\s*");
-        final int[] array = new int[stringValues.length];
-        try {
-            for (int i = 0; i < array.length; ++i)
-                array[i] = Integer.parseInt(stringValues[i]);
-        } catch (final NumberFormatException e) {
-            e.printStackTrace(System.err);
-            return null;
-        }
-        return array;
-    }
+	protected static final int[] parseCSIntArray(final String csv) {
 
-    @Override
-    public Void call() throws IOException, ExecutionException, InterruptedException {
+	    if (csv == null)
+	        return null;
+	    final String[] stringValues = csv.split(",\\s*");
+	    final int[] array = new int[stringValues.length];
+	    try {
+	        for (int i = 0; i < array.length; ++i)
+	            array[i] = Integer.parseInt(stringValues[i]);
+	    } catch (final NumberFormatException e) {
+	        e.printStackTrace(System.err);
+	        return null;
+	    }
+	    return array;
+	}
 
-        final Interval cropInterval = new FinalInterval(
-                parseCSLongArray(cropMinStr),
-                parseCSLongArray(cropMaxStr));
+	@Override
+	public Void call() throws IOException, ExecutionException, InterruptedException {
 
-        extractLabels(
-                containerPath,
-                cropInterval,
-                outputPath,
-                OptionalDouble.of(scaling),
-                OptionalDouble.of(threshold),
-                Optional.ofNullable(datasets),
-                Optional.ofNullable(parseCSIntArray(blockSizeStr))
-        );
+	    final Interval cropInterval = new FinalInterval(
+	            parseCSLongArray(cropMinStr),
+	            parseCSLongArray(cropMaxStr));
 
-        return null;
-    }
+	    extractLabels(
+	            containerPath,
+	            cropInterval,
+	            outputPath,
+	            OptionalDouble.of(scaling),
+	            OptionalDouble.of(threshold),
+	            Optional.ofNullable(datasets),
+	            Optional.ofNullable(parseCSIntArray(blockSizeStr))
+	    );
 
-    @SuppressWarnings( "unchecked" )
-    public static final void main(final String... args) {
+	    return null;
+	}
 
-        CommandLine.call(new ExtractLabels(), args);
-    }
+	@SuppressWarnings( "unchecked" )
+	public static final void main(final String... args) {
+
+	    CommandLine.call(new ExtractLabels(), args);
+	}
 }

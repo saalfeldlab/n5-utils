@@ -1,4 +1,7 @@
-# n5-utils [![Build Status](https://travis-ci.com/saalfeldlab/n5-utils.svg?branch=master)](https://travis-ci.com/saalfeldlab/n5-utils)
+[![Build Status](https://github.com/saalfeldlab/n5-utils/actions/workflows/build-main.yml/badge.svg)](https://github.com/saalfeldlab/n5-utils/actions/workflows/build-main.yml)
+
+# n5-utils
+
 Simple standalone BigDataViewer for multiple N5 (or HDF5) datasets
 or mipmap pyramids and also a copy, rechunking, and recompressing
 tool for N5 and HDF5.

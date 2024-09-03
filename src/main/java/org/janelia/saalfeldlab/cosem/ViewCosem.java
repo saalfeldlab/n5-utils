@@ -119,7 +119,6 @@
  */
 package org.janelia.saalfeldlab.cosem;
 
-import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -133,15 +132,16 @@ import javax.swing.JFrame;
 import javax.swing.SwingUtilities;
 import javax.swing.WindowConstants;
 
-import org.janelia.saalfeldlab.N5Factory;
-import org.janelia.saalfeldlab.N5Factory.N5Options;
+import org.janelia.saalfeldlab.n5.N5Exception;
 import org.janelia.saalfeldlab.n5.N5FSReader;
 import org.janelia.saalfeldlab.n5.N5Reader;
 import org.janelia.saalfeldlab.n5.N5Reader.Version;
 import org.janelia.saalfeldlab.n5.imglib2.N5Utils;
+import org.janelia.saalfeldlab.n5.universe.N5Factory;
 import org.scijava.ui.behaviour.io.InputTriggerConfig;
 import org.scijava.ui.behaviour.util.TriggerBehaviourBindings;
 
+import bdv.cache.SharedQueue;
 import bdv.tools.brightness.ConverterSetup;
 import bdv.tools.brightness.MinMaxGroup;
 import bdv.tools.brightness.SetupAssignments;
@@ -151,7 +151,6 @@ import bdv.util.BdvHandle;
 import bdv.util.BdvOptions;
 import bdv.util.BdvStackSource;
 import bdv.util.RandomAccessibleIntervalMipmapSource;
-import bdv.util.volatiles.SharedQueue;
 import bdv.util.volatiles.VolatileViews;
 import bdv.viewer.Source;
 import mpicbg.spim.data.sequence.FinalVoxelDimensions;
@@ -193,7 +192,7 @@ public class ViewCosem<T extends NativeType<T> & NumericType<T>>  implements Cal
 
     @SuppressWarnings("unchecked")
     @Override
-    public Void call() throws IOException {
+    public Void call() {
 
         final int numProc = Runtime.getRuntime().availableProcessors();
         final SharedQueue queue = new SharedQueue(Math.min(8, Math.max(1, numProc / 2)));
@@ -203,11 +202,13 @@ public class ViewCosem<T extends NativeType<T> & NumericType<T>>  implements Cal
         options.numRenderingThreads(numRenderingThreads);
         options.screenScales(screenScales);
 
+        final N5Factory n5Factory = new N5Factory().hdf5DefaultBlockSize(64);
+
         // check if raw data path is specified, and if it's not, try to get it from the attributes
         final String rawDataContainer, rawDataGroup;
         if (rawDataPath == null || rawDataPath.isEmpty()) {
             // try to read raw data location from the attributes of a prediction dataset
-            final N5Reader n5 = N5Factory.createN5Reader(new N5Options(containerPath, new int[] {64}, null));
+            final N5Reader n5 = n5Factory.openReader(containerPath);
             final String[] datasets = n5.list("");
             if (datasets.length > 0) {
                 final String predictionDataset = datasets[0];
@@ -230,7 +231,7 @@ public class ViewCosem<T extends NativeType<T> & NumericType<T>>  implements Cal
         if (rawDataContainer != null && !rawDataContainer.isEmpty()) {
             System.out.println("Add raw data: N5=" + rawDataContainer + ",  group=" + rawDataGroup);
 
-            final N5Reader n5 = N5Factory.createN5Reader(new N5Options(rawDataContainer, new int[] {64}, null));
+            final N5Reader n5 = n5Factory.openReader(rawDataContainer);
             final double[] resolution;
             {
                 double[] resolutionArr = null;
@@ -245,7 +246,7 @@ public class ViewCosem<T extends NativeType<T> & NumericType<T>>  implements Cal
                         voxelDimensions.dimensions(resolutionArr);
                     } else {
                         // use the same resolution as in the prediction datasets
-                        final N5Reader n5Predictions = N5Factory.createN5Reader(new N5Options(containerPath, new int[] {64}, null));
+                        final N5Reader n5Predictions = n5Factory.openReader(containerPath);
                         final String[] predictionDatasets = n5Predictions.list("");
                         if (predictionDatasets.length > 0) {
                             final String predictionDataset = predictionDatasets[0];
@@ -316,7 +317,7 @@ public class ViewCosem<T extends NativeType<T> & NumericType<T>>  implements Cal
         }
 
         // add labels
-        final N5Reader n5 = N5Factory.createN5Reader(new N5Options(containerPath, new int[] {64}, null));
+        final N5Reader n5 = n5Factory.openReader(containerPath);
         final String[] datasets = n5.list("");
 
         int id = 1;
@@ -459,7 +460,7 @@ public class ViewCosem<T extends NativeType<T> & NumericType<T>>  implements Cal
         return x;
     }
 
-    private static final int datasetN(final N5Reader n5, final String group) throws IOException {
+    private static final int datasetN(final N5Reader n5, final String group) {
 
         if (n5.datasetExists(group))
             return n5.getAttribute(group, "dimensions", long[].class).length;
@@ -479,7 +480,7 @@ public class ViewCosem<T extends NativeType<T> & NumericType<T>>  implements Cal
                     Version version;
                     try {
                         version = n5.getVersion();
-                    } catch (final IOException f) {
+                    } catch (final N5Exception f) {
                         f.printStackTrace(System.err);
                         continue;
                     }
