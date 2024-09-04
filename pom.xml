@@ -12,7 +12,7 @@
 
 	<groupId>org.janelia.saalfeldlab</groupId>
 	<artifactId>n5-utils</artifactId>
-	<version>0.0.7-SNAPSHOT</version>
+	<version>0.0.8-SNAPSHOT</version>
 
 	<name>N5 Utils</name>
 	<description>simple standalone BigDataViewer for multiple N5 (or HDF5)
