@@ -2,13 +2,18 @@
 
 # n5-utils
 
-Simple standalone BigDataViewer for multiple N5 (or HDF5) datasets
-or mipmap pyramids and also a copy, rechunking, and recompressing
-tool for N5 and HDF5.
+https://github.com/user-attachments/assets/62d3415e-7f7c-4b43-886f-5e6de8a5b8a1
 
-Installation requires maven, OpenJDK8, and lib-hdf5, on Ubuntu:
+Collection of standalone command line tools to work with HDF5/ Zarr/ N5 datasets.  Including:
+
+- A simple standalone BigDataViewer for multiple datasets or mipmap pyramids.
+- A copy, re-chunking, and re-compressing tool for individual datasets or groups.
+- A `unique` tool to get the set of unique numbers in a dataset.
+- An `equals` tool to compare two datasets.
+
+Installation requires maven, OpenJDK, lib-hdf5, [and libblosc] on Ubuntu:
 ```bash
-sudo apt-get install openjdk-8-jdk maven hdf5-tools
+sudo apt-get install openjdk-21-jdk maven hdf5-tools libblosc1
 ```
 On other platforms, please find your way and report back if interested.
 
@@ -18,7 +23,7 @@ Install into your favorite local binary `$PATH`:
 ```
 All dependencies will be downloaded and managed by maven automatically.
 
-This installs two tools, `n5-view` and `n5-copy`.
+This installs the tools, `n5-view`, `n5-copy`, `n5-equals`, and `n5-unique`
 
 Run the viewer
 ```bash
@@ -31,7 +36,7 @@ n5-view \
   -c -1,1 \
   -r 1,1,10
 ```
-to look at two datasets or mipmap pyramids from an HDF5 and an N5 container at 1x1x10 resolution and contrast ranges [0,255] and [-1,1].  The viewer maps both contrast ranges into [0,1000] because BDV cannot yet deal with negative intensities and the sliders only show integers.  Sorry for the hack.
+to look at two datasets or mipmap pyramids from an HDF5 and N5 container at 1x1x10 resolution and contrast ranges [0,255] and [-1,1].  The viewer maps both contrast ranges into [0,1000] because BDV cannot yet deal with negative intensities and the sliders only show integers.  Sorry for the hack.
 
 Copy from N5/HDF5 to N5/HDF5:
 ```bash
