@@ -133,7 +133,7 @@ public class LongListType extends AbstractNativeType<LongListType> implements Ad
 	 * This is more efficient than subsequent calls of {@link #get(int)}
 	 * because the base offset has to be calculated only once.
 	 *
-	 * @param values
+	 * @param set
 	 */
 	public void read(final TLongSet set) {
 
