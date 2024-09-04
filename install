@@ -88,10 +88,28 @@ echo ' \' >> n5-equals
 echo '  org.janelia.saalfeldlab.Equals "$@"' >> n5-equals
 
 chmod a+x n5-equals
+
+echo '#!/bin/bash' > n5-unique
+echo '' >> n5-unique
+echo "JAR=\$HOME/.m2/repository/org/janelia/saalfeldlab/n5-utils/${VERSION}/n5-utils-${VERSION}.jar" >> n5-unique
+echo 'java \' >> n5-unique
+echo "  -Xmx${MEM}g \\" >> n5-unique
+if [[ $(java -version 2>&1 | grep version) =~ 1.8 ]]
+	then
+		echo '  -XX:+UseConcMarkSweepGC \' >> n5-equals
+fi
+echo -n '  -cp $JAR:' >> n5-unique
+echo -n $(cat cp.txt) >> n5-unique
+echo ' \' >> n5-unique
+echo '  org.janelia.saalfeldlab.Unique "$@"' >> n5-unique
+
+chmod a+x n5-unique
+
 rm cp.txt
 
 mkdir -p $INSTALL_DIR
 mv n5-view $INSTALL_DIR/
 mv n5-copy $INSTALL_DIR/
 mv n5-equals $INSTALL_DIR/
+mv n5-unique $INSTALL_DIR/
 
