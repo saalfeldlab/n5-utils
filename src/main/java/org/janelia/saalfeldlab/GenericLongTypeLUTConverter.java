@@ -129,6 +129,9 @@ import net.imglib2.view.composite.RealComposite;
  * Converts a {@link RealComposite} into an {@link UnsignedLongType}.
  *
  * @author Stephan Saalfeld &lt;saalfelds@janelia.hhmi.org&gt;
+ *
+ * @param <I> input type
+ * @param <O> output type
  */
 public class GenericLongTypeLUTConverter<I extends GenericLongType<I>, O extends GenericLongType<O>> implements Converter<I, O> {
 

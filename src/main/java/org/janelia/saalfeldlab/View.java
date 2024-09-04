@@ -174,7 +174,7 @@ import picocli.CommandLine;
 import picocli.CommandLine.Option;
 
 /**
- *
+ * BigDataViewer based viewer application for N5 datasets.
  *
  * @author Stephan Saalfeld &lt;saalfelds@janelia.hhmi.org&gt;
  */

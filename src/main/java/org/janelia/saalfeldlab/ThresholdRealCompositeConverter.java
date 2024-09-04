@@ -128,6 +128,8 @@ import net.imglib2.view.composite.RealComposite;
  * Converts a {@link RealComposite} into an {@link UnsignedLongType}.
  *
  * @author Stephan Saalfeld &lt;saalfelds@janelia.hhmi.org&gt;
+ *
+ * @param <T> input type
  */
 public class ThresholdRealCompositeConverter<T extends RealType<T>> implements Converter<RealComposite<T>, UnsignedLongType> {
 

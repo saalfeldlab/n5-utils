@@ -139,7 +139,7 @@ import picocli.CommandLine;
 import picocli.CommandLine.Option;
 
 /**
- *
+ * Application to extract the unique sets of numbers present in an N5 dataset.
  *
  * @author Stephan Saalfeld &lt;saalfelds@janelia.hhmi.org&gt;
  */
@@ -148,7 +148,7 @@ public class Unique implements Callable<Void> {
 	@Option(names = {"-i", "--container"}, required = true, description = "container path, e.g. -i $HOME/fib19.n5")
 	private String containerPath = null;
 
-	@Option(names = {"-d", "--datasets"}, required = true, description = "dataset, e.g. -d '/slab-26,slab-27'")
+	@Option(names = {"-d", "--dataset"}, required = true, description = "dataset, e.g. -d '/slab-26'")
 	private String dataset = null;
 
 	public static <T extends IntegerType<T>>long[] uniqueInteger(final IterableInterval<T> iterable) {

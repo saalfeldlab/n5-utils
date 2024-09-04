@@ -127,6 +127,8 @@ import net.imglib2.type.numeric.integer.UnsignedLongType;
  * Converts a {@link RealType} above threshold into an {@link UnsignedLongType}.
  *
  * @author Stephan Saalfeld &lt;saalfelds@janelia.hhmi.org&gt;
+ *
+ * @param <T> input type
  */
 public class ThresholdRealConverter<T extends RealType<T>> implements Converter<T, UnsignedLongType> {
 

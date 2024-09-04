@@ -150,7 +150,7 @@ import picocli.CommandLine;
 import picocli.CommandLine.Option;
 
 /**
- *
+ * Application to copy/ re-block/ re-compress a group from one N5 container into another.
  *
  * @author Stephan Saalfeld &lt;saalfelds@janelia.hhmi.org&gt;
  */
