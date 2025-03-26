@@ -134,7 +134,6 @@ import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.type.NativeType;
 import net.imglib2.type.numeric.IntegerType;
 import net.imglib2.type.numeric.RealType;
-import net.imglib2.view.Views;
 import picocli.CommandLine;
 import picocli.CommandLine.Option;
 
@@ -188,17 +187,16 @@ public class Unique implements Callable<Void> {
 		case INT32:
 		case UINT64:
 		case INT64:
-			System.out.println(Arrays.toString(uniqueInteger((IterableInterval)Views.iterable(img))));
+			System.out.println(Arrays.toString(uniqueInteger((IterableInterval)img)));
 			break;
 		default:
-			System.out.println(Arrays.toString(uniqueReal((IterableInterval)Views.iterable(img))));
+			System.out.println(Arrays.toString(uniqueReal((IterableInterval)img)));
 		}
 		System.out.println();
 		return null;
 
 	}
 
-	@SuppressWarnings( "unchecked" )
 	public static final void main(final String... args) {
 
 		System.exit(new CommandLine(new Unique()).execute(args));
