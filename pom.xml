@@ -7,7 +7,7 @@
 	<parent>
 		<groupId>org.scijava</groupId>
 		<artifactId>pom-scijava</artifactId>
-		<version>38.0.1</version>
+		<version>40.0.0</version>
 	</parent>
 
 	<groupId>org.janelia.saalfeldlab</groupId>
@@ -120,7 +120,13 @@
 		<!-- NB: Deploy releases to the SciJava Maven repository. -->
 		<releaseProfiles>sign,deploy-to-scijava</releaseProfiles>
 
+		<n5.version>3.3.1</n5.version>
+		<n5-aws-s3.version>4.2.2</n5-aws-s3.version>
+		<n5-google-cloud.version>4.1.2</n5-google-cloud.version>
 		<n5-jpeg.version>0.0.1-beta1</n5-jpeg.version>
+		<n5-universe.version>2.1.0</n5-universe.version>
+		<n5-zarr.version>1.5.0</n5-zarr.version>
+
 	</properties>
 
 	<dependencies>
