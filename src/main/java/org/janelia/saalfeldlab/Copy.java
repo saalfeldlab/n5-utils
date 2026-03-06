@@ -357,8 +357,12 @@ public class Copy implements Callable<Void> {
 		n5Reader = n5Factory.openReader(inputContainerPath);
 		n5Writer = n5Factory.openWriter(outputContainerPath);
 
-		if (groupNames == null)
-			copyGroup("");
+		if (groupNames == null) {
+			if (n5Reader.datasetExists(""))
+				copyDataset("");
+			else
+				copyGroup("");
+		}
 		else {
 			for (final String groupName : groupNames)
 				if (n5Reader.exists(groupName)) {
