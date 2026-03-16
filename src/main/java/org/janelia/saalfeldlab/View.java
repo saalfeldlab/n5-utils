@@ -377,8 +377,16 @@ public class View implements Callable<Void> {
 					n5Sources = new ValuePair<>(new RandomAccessibleInterval[] {source}, new double[][]{scale});
 				}
 				else {
-					n5Sources = N5Utils.openMipmaps(n5, groupName, true);
-					n = n5Sources.getA()[0].numDimensions();
+					// Try custom multiscale loader first (handles OME-Zarr better)
+					Pair<RandomAccessibleInterval<NativeType>[], double[][]> customSources = loadMultiscalePyramid(n5, groupName);
+					if (customSources != null && customSources.getA() != null && customSources.getA().length > 0) {
+						n5Sources = customSources;
+						n = n5Sources.getA()[0].numDimensions();
+					} else {
+						// Fallback to N5Utils.openMipmaps
+						n5Sources = N5Utils.openMipmaps(n5, groupName, true);
+						n = n5Sources.getA()[0].numDimensions();
+					}
 				}
 
 				/* make volatile */
@@ -611,12 +619,145 @@ public class View implements Callable<Void> {
 		return allAxes;
 	}
 
+	/**
+	 * Find the first scale level dataset in a multiscale group.
+	 * Tries common patterns: "0", "s0", or lists children to find the first dataset.
+	 *
+	 * @param n5 the N5 reader
+	 * @param group the group path
+	 * @return the path to the first scale level dataset, or null if not found
+	 */
+	private static final String findFirstScaleLevel(final N5Reader n5, final String group) {
+
+		// Try common scale level naming patterns
+		final String[] commonPatterns = {"0", "s0", "1", "s1"};
+		for (final String pattern : commonPatterns) {
+			final String candidate = group + "/" + pattern;
+			if (n5.datasetExists(candidate))
+				return candidate;
+		}
+
+		// If common patterns don't work, try to list children and find first dataset
+		try {
+			final String[] children = n5.list(group);
+			if (children != null) {
+				// Sort to ensure consistent ordering
+				Arrays.sort(children);
+				for (final String child : children) {
+					final String candidate = group + "/" + child;
+					if (n5.datasetExists(candidate))
+						return candidate;
+				}
+			}
+		} catch (final Exception e) {
+			// If listing fails, return null
+		}
+
+		return null;
+	}
+
+	/**
+	 * Find all scale levels in a multiscale group.
+	 * Returns dataset paths sorted by scale level.
+	 *
+	 * @param n5 the N5 reader
+	 * @param group the group path
+	 * @return array of scale level dataset paths, or null if none found
+	 */
+	private static final String[] findAllScaleLevels(final N5Reader n5, final String group) {
+
+		final List<String> scaleLevels = new ArrayList<>();
+
+		try {
+			final String[] children = n5.list(group);
+			if (children != null) {
+				// Sort numerically/lexicographically
+				Arrays.sort(children, (a, b) -> {
+					try {
+						// Try numeric comparison first
+						final int aNum = Integer.parseInt(a.replaceAll("[^0-9]", ""));
+						final int bNum = Integer.parseInt(b.replaceAll("[^0-9]", ""));
+						return Integer.compare(aNum, bNum);
+					} catch (final NumberFormatException e) {
+						return a.compareTo(b);
+					}
+				});
+
+				for (final String child : children) {
+					final String candidate = group + "/" + child;
+					if (n5.datasetExists(candidate))
+						scaleLevels.add(candidate);
+				}
+			}
+		} catch (final Exception e) {
+			// If listing fails, return null
+			return null;
+		}
+
+		return scaleLevels.isEmpty() ? null : scaleLevels.toArray(new String[0]);
+	}
+
+	/**
+	 * Manually load multiscale pyramid datasets.
+	 * This handles OME-Zarr style multiscale groups that N5Utils.openMipmaps may not handle.
+	 *
+	 * @param n5 the N5 reader
+	 * @param group the group path
+	 * @return pair of RandomAccessibleInterval arrays and scale arrays
+	 */
+	@SuppressWarnings({"rawtypes", "unchecked"})
+	private static final Pair<RandomAccessibleInterval<NativeType>[], double[][]> loadMultiscalePyramid(
+			final N5Reader n5,
+			final String group) {
+
+		final String[] scaleLevels = findAllScaleLevels(n5, group);
+		if (scaleLevels == null || scaleLevels.length == 0)
+			return null;
+
+		final RandomAccessibleInterval<NativeType>[] sources = new RandomAccessibleInterval[scaleLevels.length];
+		final double[][] scales = new double[scaleLevels.length][];
+
+		for (int i = 0; i < scaleLevels.length; ++i) {
+			sources[i] = (RandomAccessibleInterval)N5Utils.openVolatile(n5, scaleLevels[i]);
+			final int n = sources[i].numDimensions();
+
+			// Try to read downsampling factors from attributes
+			double[] downsamplingFactors = null;
+			try {
+				downsamplingFactors = n5.getAttribute(scaleLevels[i], "downsamplingFactors", double[].class);
+				if (downsamplingFactors == null) {
+					downsamplingFactors = n5.getAttribute(scaleLevels[i], "scale", double[].class);
+				}
+			} catch (final Exception e) {
+				// Ignore
+			}
+
+			// Calculate scale based on downsampling factors or assume powers of 2
+			if (downsamplingFactors != null && downsamplingFactors.length == n) {
+				scales[i] = downsamplingFactors.clone();
+			} else {
+				// Default: assume each level is 2x downsampled from previous
+				final double factor = Math.pow(2, i);
+				scales[i] = new double[n];
+				Arrays.fill(scales[i], factor);
+			}
+		}
+
+		return new ValuePair<>(sources, scales);
+	}
+
 	private static final int datasetN(final N5Reader n5, final String group) {
 
 		if (n5.datasetExists(group))
 			return n5.getAttribute(group, "dimensions", long[].class).length;
-		else
-			return n5.getAttribute(group + "/s0", "dimensions", long[].class).length;
+		else {
+			// Try to find the first scale level dataset
+			final String firstScale = findFirstScaleLevel(n5, group);
+			if (firstScale != null)
+				return n5.getAttribute(firstScale, "dimensions", long[].class).length;
+			else
+				throw new RuntimeException("Could not find any scale level dataset in group: " + group);
+		}
 	}
 
 	private static final double[] datasetOffset(final N5Reader n5, final String group) {
@@ -624,8 +765,11 @@ public class View implements Callable<Void> {
 		double[] offset;
 		try {
 			offset = n5.getAttribute(group, "offset", double[].class);
-			if (offset == null)
-				offset = n5.getAttribute(group + "/s0", "offset", double[].class);
+			if (offset == null) {
+				final String firstScale = findFirstScaleLevel(n5, group);
+				if (firstScale != null)
+					offset = n5.getAttribute(firstScale, "offset", double[].class);
+			}
 			if (offset != null)
 				offset = Arrays.copyOf(offset, datasetN(n5, group));
 		} catch (final N5Exception e) {
