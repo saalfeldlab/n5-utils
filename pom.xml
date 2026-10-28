@@ -127,6 +127,11 @@
 		<n5-universe.version>2.1.0</n5-universe.version>
 		<n5-zarr.version>1.5.0</n5-zarr.version>
 
+		<!-- TEMPORARY: remove the SNAPSHOT/bytedeco overrides below once janelia-jhdf5 is released. -->
+		<janelia-jhdf5.version>26.10.0-SNAPSHOT</janelia-jhdf5.version>
+		<!-- pom-scijava manages older bytedeco versions; match what janelia-jhdf5 is built against. -->
+		<javacpp.version>1.5.15-SNAPSHOT</javacpp.version>
+		<hdf5.version>2.2.0-${javacpp.version}</hdf5.version>
 	</properties>
 
 	<dependencies>
@@ -158,6 +163,13 @@
 		<dependency>
 			<groupId>org.janelia.saalfeldlab</groupId>
 			<artifactId>n5-hdf5</artifactId>
+			<!-- n5-hdf5 pulls in cisd:jhdf5, which would shadow janelia-jhdf5 (same packages) on the classpath. -->
+			<exclusions>
+				<exclusion>
+					<groupId>cisd</groupId>
+					<artifactId>jhdf5</artifactId>
+				</exclusion>
+			</exclusions>
 		</dependency>
 		<dependency>
 			<groupId>net.imglib2</groupId>
@@ -187,6 +199,14 @@
 		<dependency>
 			<groupId>sc.fiji</groupId>
 			<artifactId>bigdataviewer-core</artifactId>
+			<!-- bigdataviewer-core 10.6.1 pulls in cisd:jhdf5, which would shadow janelia-jhdf5 (same packages).
+			     Remove this exclusion once bigdataviewer-core itself depends on janelia-jhdf5. -->
+			<exclusions>
+				<exclusion>
+					<groupId>cisd</groupId>
+					<artifactId>jhdf5</artifactId>
+				</exclusion>
+			</exclusions>
 		</dependency>
 		<dependency>
 			<groupId>info.picocli</groupId>
@@ -222,8 +242,15 @@
 			<artifactId>n5-universe</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>cisd</groupId>
-			<artifactId>jhdf5</artifactId>
+			<groupId>org.janelia</groupId>
+			<artifactId>janelia-jhdf5</artifactId>
+			<version>${janelia-jhdf5.version}</version>
+		</dependency>
+		<!-- hdf.hdf5lib.H5 needs an slf4j binding at runtime; tests (CopyTest) don't get one otherwise. -->
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-nop</artifactId>
+			<scope>test</scope>
 		</dependency>
 		<dependency>
 			<groupId>com.formdev</groupId>
@@ -243,6 +270,14 @@
 		<repository>
 			<id>saalfeld-lab-maven-repo</id>
 			<url>https://saalfeldlab.github.io/maven</url>
+		</repository>
+		<!-- TEMPORARY: org.bytedeco snapshots (javacpp, hdf5) needed by janelia-jhdf5 until they are
+		     released. Remove once janelia-jhdf5 is released. -->
+		<repository>
+			<id>central-portal-snapshots</id>
+			<url>https://central.sonatype.com/repository/maven-snapshots/</url>
+			<releases><enabled>false</enabled></releases>
+			<snapshots><enabled>true</enabled></snapshots>
 		</repository>
 	</repositories>
 
